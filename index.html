@@ -5,130 +5,171 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Proofdesk · Make your knowledge base safe to answer from</title>
   <meta name="description" content="Proofdesk screens every HR and IT document before an AI help desk can read it, and checks every answer against those documents before an employee sees it. Built on the Clocked API.">
-  <meta property="og:title" content="Proofdesk">
-  <meta property="og:description" content="Every source screened, every answer checked. Built on nine Clocked endpoints.">
+  <meta property="og:title" content="Proofdesk · Make your knowledge base safe to answer from">
+  <meta property="og:description" content="Every source screened, every answer checked. Nine Clocked endpoints, each with a job.">
+  <meta property="og:image" content="https://automationbot24x7.github.io/proofdesk/assets/img/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" href="assets/img/mark.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;680;700;750&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/app.css">
   <link rel="stylesheet" href="assets/css/landing.css">
 </head>
 <body class="landing">
-  <header class="topbar lp-top">
+  <header class="lp-top" id="lp-top">
     <a class="brand" href="index.html"><img class="mark" src="assets/img/mark.svg" alt=""><span>Proofdesk</span></a>
     <nav class="lp-nav" aria-label="Page">
-      <a href="#problem">Why</a><a href="#how">How it works</a><a href="#endpoints">Clocked endpoints</a><a href="#reliability">Failure handling</a>
+      <a href="#problem">Why</a><a href="#checkpoints">How it works</a><a href="#endpoints">Endpoints</a><a href="#reliability">Failure handling</a>
     </nav>
-    <div class="top-right">
-      <a class="btn btn-sm btn-ghost" href="https://github.com/Automationbot24x7/proofdesk">GitHub</a>
+    <div class="lp-actions">
+      <a class="lp-link" href="https://github.com/Automationbot24x7/proofdesk"><i data-icon="github"></i><span>Source</span></a>
       <a class="btn btn-sm btn-primary" href="app.html#sources">Open the demo</a>
     </div>
   </header>
 
-  <main>
-    <section class="hero">
-      <div class="hero-copy">
-        <div class="eyebrow">For teams putting an AI help desk on top of their documents</div>
-        <h1>Make your knowledge base safe to answer from.</h1>
-        <p class="lead">Proofdesk screens every HR and IT document before an assistant can read it, then checks every answer against those documents before an employee sees it. Each step is a Clocked call whose result changes what happens next.</p>
-        <div class="hero-cta">
-          <a class="btn btn-primary btn-lg" href="app.html#sources">Open the demo workspace</a>
-          <a class="btn btn-lg" href="app.html#answers?s=poisoned">See the poisoned-FAQ scenario</a>
-        </div>
-        <p class="hero-note">No sign-up. The demo replays real recorded Clocked responses; add your own Clocked key to run everything live in your browser.</p>
+  <section class="hero">
+    <div class="hero-art" aria-hidden="true"><img src="assets/img/art-hero.jpg" alt=""></div>
+    <div class="hero-inner">
+      <a class="hero-pill" href="#endpoints"><span class="dot"></span>Built on the Clocked API · nine endpoints, each with a job</a>
+      <h1>Make your knowledge base safe to answer from.</h1>
+      <p class="lead">Proofdesk screens every HR and IT document before an AI help desk can read it, then checks every answer against those documents before an employee sees it.</p>
+      <div class="hero-cta">
+        <a class="btn btn-primary btn-lg" href="app.html#sources">Open the demo workspace <i data-icon="arrow"></i></a>
+        <a class="btn btn-lg btn-glass" href="app.html#answers?s=poisoned"><i data-icon="play"></i>See a poisoned page get caught</a>
       </div>
-      <figure class="hero-shot">
-        <img src="assets/img/hero.jpg" alt="Proofdesk answer check: the checked answer next to the unchecked desk's answer, with contradicted claims flagged" onerror="this.closest('figure').classList.add('noimg')">
-      </figure>
-    </section>
+      <dl class="hero-stats" aria-label="Results of the recorded source check">
+        <div><dt>10</dt><dd>documents screened</dd></div>
+        <div><dt>3</dt><dd>personal details masked</dd></div>
+        <div><dt>1</dt><dd>poisoned page quarantined</dd></div>
+        <div><dt>1</dt><dd>unsafe script withheld</dd></div>
+        <div><dt>1</dt><dd>outdated policy retired</dd></div>
+      </dl>
+      <p class="hero-note">Real results from the demo handbook, recorded from the Clocked API. No sign-up: open the demo, or add your own Clocked key to run it live.</p>
+    </div>
+  </section>
 
-    <section class="band" id="problem">
-      <div class="wrap">
-        <h2>An AI help desk is only as safe as the folder it reads.</h2>
-        <p class="sub">Most company knowledge bases were never written for an assistant. Point one at them and these are the answers employees get.</p>
-        <div class="fail-grid">
-          <article class="fail"><span class="chip chip-warn">Retired version</span><h3>Last year's policy still answers</h3><p>The 2025 travel policy reimbursed alcohol. The 2026 one does not. Both sit in the same folder.</p><div class="by">Stopped by <span class="ep ep-g3">Compare</span> <span class="ep ep-g1">Extract</span></div></article>
-          <article class="fail"><span class="chip chip-warn">Different case</span><h3>Another country's rules</h3><p>An employee in India asks about carrying leave forward and gets the US five-day rollover.</p><div class="by">Stopped by <span class="ep ep-g3">Rerank</span></div></article>
-          <article class="fail"><span class="chip chip-bad">Hidden instructions</span><h3>An imported page talks to the bot</h3><p>An old intranet FAQ tells "AI assistants" that every expense is approved automatically.</p><div class="by">Stopped by <span class="ep ep-g2">Guard</span></div></article>
-          <article class="fail"><span class="chip chip-bad">Unsafe script</span><h3>A fix that disables antivirus</h3><p>A recently edited printer article now turns off real-time protection and runs a remote script.</p><div class="by">Stopped by <span class="ep ep-g2">Inspect</span></div></article>
-          <article class="fail"><span class="chip chip-violet">Personal data</span><h3>A colleague's home address</h3><p>An onboarding checklist includes someone's personal mobile, personal email and home address.</p><div class="by">Stopped by <span class="ep ep-g2">Protect</span></div></article>
-          <article class="fail"><span class="chip chip-info">Sensitive</span><h3>A cry for help gets a policy quote</h3><p>"My manager shouts at me and I can't cope" deserves a person, not an automatic answer.</p><div class="by">Stopped by <span class="ep ep-g1">Decide</span></div></article>
-        </div>
+  <section class="shot-wrap">
+    <figure class="shot">
+      <div class="shot-bar"><span></span><span></span><span></span><div class="shot-url"><i data-icon="lock"></i>proofdesk · answer check</div></div>
+      <img src="assets/img/hero.jpg" alt="Answer check: Proofdesk's checked answer next to an unchecked desk that repeats a hidden instruction from an imported FAQ" loading="lazy">
+    </figure>
+    <figcaption>Same question, same draft step. The unchecked desk read a poisoned FAQ and told the employee every claim is approved automatically. Proofdesk had quarantined that page and answered from the current policy, every claim linked to its source.</figcaption>
+  </section>
+
+  <section class="wrap" id="problem">
+    <div class="sec-head">
+      <div class="kicker">The problem</div>
+      <h2>An AI help desk is only as safe as the folder it reads.</h2>
+      <p class="sub">Most company knowledge bases were never written for an assistant. Point one at them and these are the answers employees get. Each one happens in the demo, and each is stopped by a different Clocked check.</p>
+    </div>
+    <div class="fail-grid">
+      <article class="fail"><div class="fail-ic tone-warn"><i data-icon="history"></i></div><h3>Last year's policy still answers</h3><p>The 2025 travel policy reimbursed alcohol. The 2026 one does not. Both sit in the same folder.</p><div class="by"><span class="ep ep-g3">Compare</span><span class="ep ep-g1">Extract</span></div></article>
+      <article class="fail"><div class="fail-ic tone-warn"><i data-icon="users"></i></div><h3>Another country's rules</h3><p>An employee in India asks about rolling over leave and gets the US five-day limit instead of India's thirty.</p><div class="by"><span class="ep ep-g3">Rerank</span></div></article>
+      <article class="fail"><div class="fail-ic tone-bad"><i data-icon="fileWarn"></i></div><h3>An imported page talks to the bot</h3><p>An old intranet FAQ tells "AI assistants" that every expense claim is approved automatically.</p><div class="by"><span class="ep ep-g2">Guard</span></div></article>
+      <article class="fail"><div class="fail-ic tone-bad"><i data-icon="terminal"></i></div><h3>A fix that disables antivirus</h3><p>A recently edited printer article now turns off real-time protection and runs a script from the internet.</p><div class="by"><span class="ep ep-g2">Inspect</span></div></article>
+      <article class="fail"><div class="fail-ic tone-violet"><i data-icon="fingerprint"></i></div><h3>A colleague's home address</h3><p>An onboarding checklist includes someone's personal mobile, personal email and home address.</p><div class="by"><span class="ep ep-g2">Protect</span></div></article>
+      <article class="fail"><div class="fail-ic tone-info"><i data-icon="message"></i></div><h3>A cry for help gets a policy quote</h3><p>"My manager shouts at me and I can't cope" deserves a person, not an automatic answer.</p><div class="by"><span class="ep ep-g1">Decide</span></div></article>
+    </div>
+  </section>
+
+  <section class="band" id="checkpoints">
+    <div class="wrap split">
+      <div class="split-art"><img src="assets/img/art-sources.jpg" alt=""></div>
+      <div class="split-copy">
+        <div class="kicker"><span class="cp-tag">1</span>Source check · when documents are imported</div>
+        <h2>Nothing reaches the assistant unscreened.</h2>
+        <p class="sub">One Pipeline call per document runs four reads over the same text. Then every clean document is compared with every other.</p>
+        <ul class="steps">
+          <li><span class="ep ep-g1">Extract</span><div><b>Reads the header</b>: title, version, owner and effective date, with character positions.</div></li>
+          <li><span class="ep ep-g2">Protect</span><div><b>Masks personal data.</b> Only the masked copy is ever indexed.</div></li>
+          <li><span class="ep ep-g2">Guard</span><div><b>Quarantines</b> any document that addresses the assistant.</div></li>
+          <li><span class="ep ep-g2">Inspect</span><div><b>Withholds unsafe scripts</b> from IT articles; safe ones are labelled as inspected.</div></li>
+          <li><span class="ep ep-g3">Compare</span><div><b>Retires outdated versions</b>: when two documents conflict, the older effective date loses.</div></li>
+        </ul>
+        <a class="text-link" href="app.html#sources">Open the source check <i data-icon="arrow"></i></a>
       </div>
-    </section>
-
-    <section class="wrap how" id="how">
-      <h2>Two checkpoints.</h2>
-      <p class="sub">The first runs when documents are imported. The second runs on every question.</p>
-      <div class="cp-grid">
-        <article class="cp card">
-          <div class="cp-head"><span class="cp-no">1</span><div><h3>Source check</h3><p>Before a document is searchable</p></div></div>
-          <ol class="flow">
-            <li><div class="ep-row"><span class="ep ep-g0">Pipeline</span></div><div><b>One call per document</b> runs four endpoints over the same text.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g1">Extract</span></div><div>Reads title, version, owner and <b>effective date</b>, with character positions.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g2">Protect</span></div><div>Finds personal contact details; only the <b>masked copy</b> is indexed.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g2">Guard</span></div><div>Flags text that addresses the assistant; the document is <b>quarantined</b>.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g2">Inspect</span></div><div>Classifies embedded scripts; unsafe ones are <b>withheld</b>.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g3">Compare</span></div><div>Finds documents that disagree; the one with the older effective date is <b>retired</b>.</div></li>
-          </ol>
-        </article>
-        <article class="cp card">
-          <div class="cp-head"><span class="cp-no">2</span><div><h3>Answer check</h3><p>Before an employee sees an answer</p></div></div>
-          <ol class="flow">
-            <li><div class="ep-row"><span class="ep ep-g2">Protect</span><span class="ep ep-g2">Guard</span></div><div>Masks names and IDs in the question and <b>blocks</b> attempts to override the rules.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g3">Rerank</span></div><div>Reads keyword matches with the employee's country and contract; <b>skips the wrong case</b>.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g1">Fill</span></div><div>Drafts the answer and fills typed fields: approval needed, fully covered, topic, the key rule <b>word for word</b>.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g3">Verify</span></div><div>Checks every claim against the passages; contradicted claims are <b>struck out</b> with the handbook's words.</div></li>
-            <li><div class="ep-row"><span class="ep ep-g1">Decide</span></div><div>Routes it: <b>answer, answer with conditions, People Team or IT desk</b>, with probabilities.</div></li>
-          </ol>
-        </article>
+    </div>
+    <div class="wrap split reverse">
+      <div class="split-art"><img src="assets/img/art-answers.jpg" alt=""></div>
+      <div class="split-copy">
+        <div class="kicker"><span class="cp-tag">2</span>Answer check · on every question</div>
+        <h2>Every claim is tied to a source, or it does not ship.</h2>
+        <p class="sub">The question is screened, passages are chosen for this employee, the draft is checked claim by claim, and a routing decision says who answers.</p>
+        <ul class="steps">
+          <li><span class="ep ep-g2">Protect</span><span class="ep ep-g2">Guard</span><div><b>Masks names and IDs</b> in the question and blocks attempts to override the rules.</div></li>
+          <li><span class="ep ep-g3">Rerank</span><div><b>Skips passages for another country or contract</b> that keyword search ranked first.</div></li>
+          <li><span class="ep ep-g1">Fill</span><div><b>Drafts the answer</b> and reads approval needed, fully covered, topic and the key rule word for word.</div></li>
+          <li><span class="ep ep-g3">Verify</span><div><b>Checks every claim</b>; contradicted ones are struck out with the handbook's own words.</div></li>
+          <li><span class="ep ep-g1">Decide</span><div><b>Routes it</b>: answer, answer with conditions, People Team or IT desk.</div></li>
+        </ul>
+        <a class="text-link" href="app.html#answers?s=regional">Try the seven judge scenarios <i data-icon="arrow"></i></a>
       </div>
-      <p class="sub" style="margin-top:20px">Next to every answer, an <b>unchecked desk</b> answers the same question with the same draft step but raw documents and keyword search only, and Verify checks what it said. The difference is the value of the checkpoints.</p>
-    </section>
+    </div>
+  </section>
 
-    <section class="band" id="endpoints">
-      <div class="wrap">
-        <h2>Nine endpoints, each with a job.</h2>
-        <p class="sub">A call whose result is ignored is wasted. In Proofdesk every result changes what the app does or shows.</p>
-        <div class="ep-table card">
-          <div class="ept-row ept-head"><div>Endpoint</div><div>Reads</div><div>What Proofdesk does with the result</div></div>
-          <div class="ept-row"><div><span class="ep ep-g1">Extract</span></div><div>Each document's header</div><div>Uses the effective date to decide which conflicting version stays in force; shows title, version and owner with highlights.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g1">Fill</span></div><div>The passages Rerank kept</div><div>Writes the draft answer and fills approval needed, fully covered and topic, which feed the routing decision; quotes the key rule verbatim.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g1">Decide</span></div><div>Masked question plus check results</div><div>Chooses who answers and flags wellbeing, disputes or exceptions; a weakly supported draft is never sent as a plain answer.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g2">Protect</span></div><div>Documents and questions</div><div>Indexes only the masked copy of each document; searches and logs only the masked question.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g2">Guard</span></div><div>Documents and questions</div><div>Quarantines poisoned documents before indexing; blocks manipulative questions before search.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g2">Inspect</span></div><div>Scripts inside IT articles</div><div>Removes unsafe scripts from the searchable copy and sends those questions to IT; labels safe scripts as inspected.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g3">Verify</span></div><div>Draft answer against its passages</div><div>Strikes out contradicted claims, marks claims the handbook does not state, links every claim to its evidence.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g3">Compare</span></div><div>All screened documents</div><div>Finds conflicting rules; with Extract's dates, retires the older version so it can never answer.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g3">Rerank</span></div><div>Keyword matches plus the employee's profile</div><div>Sends only the passages that apply to this person to the draft; reads neighbouring sections when a passage points elsewhere.</div></div>
-          <div class="ept-row"><div><span class="ep ep-g0">Pipeline</span></div><div>Document text, question text</div><div>Runs Extract, Protect, Guard and Inspect in one call per document, and Protect with Guard (stop on injection) on each question.</div></div>
-        </div>
+  <section class="wrap" id="endpoints">
+    <div class="sec-head">
+      <div class="kicker">Clocked integration</div>
+      <h2>Nine endpoints, each with a job.</h2>
+      <p class="sub">A call whose result is ignored is wasted. In Proofdesk every result changes what the app does or shows, and the app logs that change next to each answer.</p>
+    </div>
+    <div class="ep-table">
+      <div class="ept-row ept-head"><div>Endpoint</div><div>Reads</div><div>What the result changes</div></div>
+      <div class="ept-row"><div><span class="ep ep-g1">Extract</span></div><div>Each document's header</div><div>The effective date decides which conflicting version stays in force.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g1">Fill</span></div><div>The passages Rerank kept</div><div>Writes the draft and fills typed fields that feed the routing decision; quotes the key rule verbatim.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g1">Decide</span></div><div>Masked question and check results</div><div>Chooses who answers and flags wellbeing, disputes and exception requests.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g2">Protect</span></div><div>Documents and questions</div><div>Only masked text is indexed, searched and logged.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g2">Guard</span></div><div>Documents and questions</div><div>Poisoned documents are quarantined; manipulative questions are blocked before search.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g2">Inspect</span></div><div>Scripts inside IT articles</div><div>Unsafe scripts are removed and those questions go to IT.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g3">Verify</span></div><div>The draft against its passages</div><div>Contradicted claims are struck out, unstated ones marked, supported ones cited.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g3">Compare</span></div><div>All screened documents</div><div>Conflicting rules are found; with Extract's dates the older version is retired.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g3">Rerank</span></div><div>Keyword matches and the employee's profile</div><div>Only passages that apply to this person reach the draft.</div></div>
+      <div class="ept-row"><div><span class="ep ep-g0">Pipeline</span></div><div>Document and question text</div><div>Four reads per document in one call; Protect and Guard on each question, stopping on an injection.</div></div>
+    </div>
+  </section>
+
+  <section class="band" id="reliability">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="kicker">Failure handling</div>
+        <h2>When a result is uncertain, Proofdesk fails closed.</h2>
       </div>
-    </section>
-
-    <section class="wrap" id="reliability">
-      <h2>When a result is uncertain, Proofdesk fails closed.</h2>
       <div class="rel-grid">
-        <div class="rel"><h3>Privacy check fails</h3><p>The document is not indexed. Nothing unmasked reaches the assistant.</p></div>
-        <div class="rel"><h3>Script cannot be inspected</h3><p>The script is withheld, exactly as if it had failed.</p></div>
-        <div class="rel"><h3>Verify fails or support is low</h3><p>An unverified draft is never shown as an answer; it goes to a person. Under 50% support, a plain answer becomes "answer with conditions".</p></div>
-        <div class="rel"><h3>Compare fails</h3><p>Answers still work, with a visible warning that versions were not checked.</p></div>
-        <div class="rel"><h3>No passage applies</h3><p>No draft is written. The question is routed to the right team instead of guessed at.</p></div>
-        <div class="rel"><h3>Busy or interrupted requests</h3><p>Each request carries an idempotency key and is retried with backoff on 429 and 5xx; 4xx errors are shown, never retried blindly.</p></div>
+        <div class="rel"><i data-icon="fileLock"></i><div><h3>Privacy check fails</h3><p>The document is not indexed. Nothing unmasked reaches the assistant.</p></div></div>
+        <div class="rel"><i data-icon="code"></i><div><h3>A script cannot be inspected</h3><p>It is withheld, exactly as if it had failed.</p></div></div>
+        <div class="rel"><i data-icon="scale"></i><div><h3>Verify fails or support is low</h3><p>An unverified draft never ships; it goes to a person. Under 50% support, an answer carries conditions.</p></div></div>
+        <div class="rel"><i data-icon="compare"></i><div><h3>Compare fails</h3><p>Answers still work, with a visible warning that versions were not checked.</p></div></div>
+        <div class="rel"><i data-icon="route"></i><div><h3>No passage applies</h3><p>Nothing is drafted. The question goes to the right team instead of being guessed at.</p></div></div>
+        <div class="rel"><i data-icon="history"></i><div><h3>Busy or interrupted requests</h3><p>Retried with backoff under the same idempotency key; input errors are shown, never retried blindly.</p></div></div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="wrap cta-end">
-      <h2>Try the seven judge scenarios.</h2>
-      <p class="sub">Recorded responses play without a key. Add your Clocked key and every call runs live from your browser; the key never leaves the tab except to clocked.rezolve.ai.</p>
-      <div class="hero-cta" style="justify-content:center"><a class="btn btn-primary btn-lg" href="app.html#answers">Open the answer check</a><a class="btn btn-lg" href="app.html#sources">Open the source check</a></div>
-    </section>
-  </main>
+  <section class="cta-end">
+    <div class="cta-art" aria-hidden="true"></div>
+    <div class="wrap">
+      <h2>Try it on the demo handbook.</h2>
+      <p class="sub">Recorded responses play without a key. Add your Clocked key and every call runs live from your browser; the key goes nowhere except clocked.rezolve.ai.</p>
+      <div class="hero-cta"><a class="btn btn-primary btn-lg" href="app.html#answers">Open the answer check <i data-icon="arrow"></i></a><a class="btn btn-lg btn-glass" href="app.html#sources">Open the source check</a></div>
+    </div>
+  </section>
 
-  <footer class="footer">
-    <span>Built for the Clocked Build Challenge, November 2026. Kestrel Works and its handbook are fictional.</span>
-    <span><a href="https://github.com/Automationbot24x7/proofdesk">Source and setup on GitHub</a> · MIT licence</span>
+  <footer class="lp-footer">
+    <div class="brand"><img class="mark" src="assets/img/mark.svg" alt=""><span>Proofdesk</span></div>
+    <p>Built for the Clocked Build Challenge, November 2026, on the <a href="https://clocked.rezolve.ai">Clocked API</a> by Rezolve.ai. Kestrel Works and its handbook are fictional.</p>
+    <p><a href="https://github.com/Automationbot24x7/proofdesk">Source and setup</a> · MIT licence · Icons by <a href="https://lucide.dev">Lucide</a></p>
   </footer>
+
+  <script type="module">
+    import { ICONS } from './assets/js/icons.js';
+    for (const el of document.querySelectorAll('i[data-icon]')) {
+      el.outerHTML = `<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[el.dataset.icon] || ''}</svg>`;
+    }
+    const top = document.getElementById('lp-top');
+    const onScroll = () => top.classList.toggle('scrolled', window.scrollY > 40);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  </script>
 </body>
 </html>

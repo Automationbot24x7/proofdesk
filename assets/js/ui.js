@@ -1,4 +1,5 @@
 // Small DOM and formatting helpers for the Proofdesk interface.
+import { ICONS } from './icons.js';
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -92,32 +93,7 @@ export function meter(value, tone = 'ok') {
 }
 
 export function icon(name, size = 16) {
-  const paths = {
-    check: '<path d="M4 8.5l2.5 2.5L12 5.5"/>',
-    x: '<path d="M5 5l6 6M11 5l-6 6"/>',
-    alert: '<path d="M8 3.5v5"/><circle cx="8" cy="11.5" r=".6" fill="currentColor"/>',
-    shield: '<path d="M8 2l5 2v4c0 3-2.2 5.2-5 6-2.8-.8-5-3-5-6V4z"/>',
-    lock: '<rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/>',
-    doc: '<path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3"/>',
-    search: '<circle cx="7" cy="7" r="4"/><path d="M10 10l3.5 3.5"/>',
-    sort: '<path d="M4 4h8M4 8h5M4 12h2"/>',
-    pen: '<path d="M3 13l1-3 7-7 2 2-7 7z"/>',
-    scale: '<path d="M8 2v12M3 5h10M3 5l-1.5 4h3zM13 5l-1.5 4h3z"/>',
-    route: '<circle cx="4" cy="4" r="1.5"/><circle cx="12" cy="12" r="1.5"/><path d="M5.5 4H10a2 2 0 010 4H6a2 2 0 000 4h4.5"/>',
-    code: '<path d="M6 4L2 8l4 4M10 4l4 4-4 4"/>',
-    eye: '<path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8z"/><circle cx="8" cy="8" r="2"/>',
-    key: '<circle cx="5.5" cy="10.5" r="2.5"/><path d="M7.5 9l5-5M11 5.5l1.5 1.5"/>',
-    play: '<path d="M5 3.5l7 4.5-7 4.5z"/>',
-    arrow: '<path d="M3 8h10M9 4l4 4-4 4"/>',
-    split: '<path d="M8 2v12M2 4h4M2 8h4M2 12h4M10 4h4M10 8h4M10 12h4"/>',
-    clock: '<circle cx="8" cy="8" r="5.5"/><path d="M8 5v3l2 1.5"/>',
-    copy: '<rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 11V3h8"/>',
-    chevron: '<path d="M6 4l4 4-4 4"/>',
-    user: '<circle cx="8" cy="5.5" r="2.5"/><path d="M3 13.5c.8-2.5 2.7-3.5 5-3.5s4.2 1 5 3.5"/>',
-    mask: '<rect x="2" y="5.5" width="12" height="5" rx="2.5"/>',
-    stack: '<path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/>',
-  };
-  return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ''}</svg>`;
+  return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 }
 
 export function jsonBlock(obj) {

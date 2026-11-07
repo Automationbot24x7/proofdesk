@@ -117,7 +117,7 @@ function renderMode() {
   $('#mode-text').innerHTML = state.key
     ? `<b>Live</b><span class="long"> · ${state.credits.toLocaleString()} credits used</span>`
     : `<b>Recorded</b><span class="long"> responses</span>`;
-  $('#key-btn').innerHTML = state.key ? 'Remove key' : `${icon('key')}Run live<span class="long"> with your key</span>`;
+  $('#key-btn').innerHTML = state.key ? 'Remove key' : `${icon('key')}<span>Run live<span class="long"> with your key</span></span>`;
   $('#key-btn').className = state.key ? 'btn btn-sm btn-ghost' : 'btn btn-sm btn-primary';
   $('#rescan-btn').innerHTML = state.key ? `${icon('play')}Run source check live` : `${icon('play')}Replay source check`;
 }
@@ -226,21 +226,22 @@ function renderStats(docs) {
   const retired = done ? state.library.docs.filter((d) => d.flags.includes('superseded')).length : null;
   const searchable = done ? state.library.docs.filter((d) => d.searchable).length : null;
   const anyDone = screened.length > 0;
-  const tile = (num, lbl, tone, eps, pending, jump = '', extra = '') => {
+  const tile = (num, lbl, tone, eps, pending, jump = '', extra = '', ic = 'doc') => {
     const tag = jump && !pending && num ? 'button' : 'div';
     return `<${tag} class="stat ${pending ? 'pending' : 'tone-' + tone}"${tag === 'button' ? ` type="button" data-jump="${jump}" title="Show this document"` : ''}>
+      <span class="stat-ic">${icon(ic, 17)}</span>
       <div class="num">${pending ? '–' : num}</div>
       <div class="lbl">${lbl}</div>
       <div class="by ep-row">${eps.map((e) => endpointTag(e)).join('')}${extra}</div>
     </${tag}>`;
   };
   $('#stats').innerHTML = [
-    tile(state.handbook.docs.length, 'Documents imported', 'neutral', ['pipeline']),
-    tile(piiCount, 'Personal details masked', 'violet', ['pii'], !anyDone, 'masked'),
-    tile(quarantined, 'Quarantined for hidden instructions', 'bad', ['injection'], !anyDone, 'quarantined'),
-    tile(withheld, 'Unsafe script withheld', 'bad', ['script'], !anyDone, 'script_withheld'),
-    tile(retired, 'Retired policy version', 'warn', ['compare', 'extract'], retired === null, 'superseded'),
-    tile(searchable, 'Searchable by the assistant', 'ok', [], searchable === null, '', '<span class="chip chip-ok">Indexed, masked copies</span>'),
+    tile(state.handbook.docs.length, 'Documents imported', 'neutral', ['pipeline'], false, '', '', 'stack'),
+    tile(piiCount, 'Personal details masked', 'violet', ['pii'], !anyDone, 'masked', '', 'fingerprint'),
+    tile(quarantined, 'Quarantined for hidden instructions', 'bad', ['injection'], !anyDone, 'quarantined', '', 'fileWarn'),
+    tile(withheld, 'Unsafe script withheld', 'bad', ['script'], !anyDone, 'script_withheld', '', 'terminal'),
+    tile(retired, 'Retired policy version', 'warn', ['compare', 'extract'], retired === null, 'superseded', '', 'history'),
+    tile(searchable, 'Searchable by the assistant', 'ok', [], searchable === null, '', '<span class="chip chip-ok">Indexed, masked copies</span>', 'fileSearch'),
   ].join('');
 }
 
@@ -457,6 +458,10 @@ function syncPersona() {
   $('#p-employment').value = state.profile.employment;
 }
 
+const SCENARIO_ICONS = {
+  regional: 'users', outdated: 'history', poisoned: 'fileWarn', 'unsafe-fix': 'terminal',
+  sensitive: 'message', personal: 'fingerprint', manipulation: 'ban',
+};
 const SCENARIO_TAGS = {
   regional: ['rerank'], outdated: ['compare', 'extract'], 'unsafe-fix': ['script', 'decide'],
   sensitive: ['decide'], personal: ['pii'], manipulation: ['injection'],
@@ -467,8 +472,9 @@ function renderScenarios() {
   const more = state.samples.ask.filter((s) => !s.featured);
   $('#scenarios').innerHTML = featured.map((s) => `
     <button class="scenario" type="button" data-scenario="${esc(s.id)}" aria-pressed="false">
-      <div class="n"><span>${esc(s.label)}</span><span class="ep-row">${(SCENARIO_TAGS[s.id] || []).map((e) => endpointTag(e)).join('')}</span></div>
-      <div class="h">${esc(s.hint)}</div>
+      <span class="sc-ic">${icon(SCENARIO_ICONS[s.id] || 'help', 16)}</span>
+      <span class="sc-body"><div class="n"><span>${esc(s.label)}</span><span class="ep-row">${(SCENARIO_TAGS[s.id] || []).map((e) => endpointTag(e)).join('')}</span></div>
+      <div class="h">${esc(s.hint)}</div></span>
     </button>`).join('')
     + (more.length ? `<details class="paste-box" style="margin-top:4px"><summary>More examples</summary><div class="scenarios">${more.map((s) => `
       <button class="scenario" type="button" data-scenario="${esc(s.id)}" aria-pressed="false"><div class="n"><span>${esc(s.label)}</span></div><div class="h">${esc(s.question)}</div></button>`).join('')}</div></details>` : '');
@@ -641,7 +647,7 @@ function routeBlock(r) {
   const key = r.route?.key;
   if (!key) return '';
   const L = ROUTE_LABELS[key] || { long: key, tone: 'info' };
-  const ic = { ok: 'check', warn: 'alert', info: 'route', bad: 'x' }[L.tone];
+  const ic = { answer: 'ok', answer_with_conditions: 'warn', people_team: 'users', it_desk: 'headset', blocked: 'ban', error: 'bad' }[key] || 'route';
   let why = '';
   if (key === 'blocked') why = esc(r.route.reason);
   else if (r.route.decided) {
@@ -751,7 +757,7 @@ function unsafeScriptNote(d) {
 }
 
 function baselineCard(r) {
-  const head = `<div class="card-head"><h3>${icon('alert', 16)}Unchecked desk</h3><span class="faint" style="font-size:12.5px">Same draft step, raw documents</span></div>`;
+  const head = `<div class="card-head"><h3>${icon('bot', 17)}Unchecked desk</h3><span class="faint" style="font-size:12.5px">Same draft step, raw documents</span></div>`;
   const s = r.steps.baseline;
   if (!s || s.status === 'running') return `<div class="card answer-card baseline-card">${head}<div class="answer-body"><span class="spin"></span> <span class="muted">Drafting from raw documents…</span></div></div>`;
   if (s.status === 'error') return `<div class="card answer-card baseline-card">${head}<div class="card-body">${errorBox(s.error)}</div></div>`;
