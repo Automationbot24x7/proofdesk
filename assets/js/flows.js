@@ -716,7 +716,7 @@ export async function ask(client, library, { question, profile = DEFAULT_PROFILE
     out.route = { key, decided: r.choice, confidence: r.confidence, probabilities: r.probabilities, reason, concerns };
     step({ key: 'route', status: 'done', credits: out.decision.meta.credits, meta: out.decision.meta,
       request: out.decision.request, response: out.decision.response,
-      summary: `${ROUTE_LABELS[key]?.short || key} · ${pct(r.confidence ?? r.probabilities?.[r.choice])}`,
+      summary: `${ROUTE_LABELS[key]?.short || key} · ${pct(r.probabilities?.[r.choice] ?? r.confidence)}`,
       impact: `${ROUTE_LABELS[key]?.long || key} (${pct(r.probabilities?.[r.choice] ?? r.confidence)}).`
         + (concerns.length ? ` Flags: ${concerns.map((c) => c.replace(/_/g, ' ')).join(', ')}.` : '')
         + (reason ? ` ${reason}` : '') });
