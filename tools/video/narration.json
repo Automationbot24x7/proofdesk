@@ -1,0 +1,46 @@
+{
+  "voice": "Charon",
+  "style": "a calm, confident product-demo narrator for an enterprise software company, clear and precise, unhurried, slight warmth",
+  "lines": [
+    {
+      "id": "s1",
+      "text": "Point an AI help desk at a company's documents, and this is what employees get. An old FAQ told the bot that every expense claim is approved automatically. The bot repeated it, word for word."
+    },
+    {
+      "id": "s2",
+      "text": "Proofdesk makes a knowledge base safe to answer from. It screens every document before an assistant can read it, and checks every answer before an employee sees it. Each step is a Clocked call, and each result changes what happens next."
+    },
+    {
+      "id": "s3",
+      "text": "Checkpoint one runs when documents are imported. Each document gets a single Clocked Pipeline call. Extract reads its version and effective date. Protect finds personal data. Guard looks for hidden instructions. Inspect classifies any embedded script."
+    },
+    {
+      "id": "s4",
+      "text": "Guard caught the poisoned FAQ: it speaks directly to AI assistants, so it is quarantined and never indexed. Inspect found a printer fix that turns off real-time protection and runs a script from the internet. The script is withheld. And Protect masked a colleague's personal mobile, email and home address."
+    },
+    {
+      "id": "s5",
+      "text": "Then Compare reads every pair of documents. The 2025 and 2026 travel policies disagree on seven points. Extract's effective dates settle it: the 2025 version is retired, and can never answer again."
+    },
+    {
+      "id": "s6",
+      "text": "Checkpoint two runs on every question. An employee in India asks how much leave they can roll over. Keyword search ranks the US policy first. Rerank reads each passage with the employee's profile and skips the US rules as a different case. Fill drafts the answer, and Verify checks every claim: thirty days, supported. The unchecked desk says five days. Verify marks it contradicted."
+    },
+    {
+      "id": "s7",
+      "text": "Decide chooses who answers. The printer question goes to the IT desk, because its fix was withheld. And when an employee says their manager shouts at them, Decide hands it to the People Team, with the checked draft attached, instead of replying with a policy quote."
+    },
+    {
+      "id": "s8",
+      "text": "Names and employee IDs are masked before anything is searched or logged. And a question that tries to override the rules is stopped by Guard, before search."
+    },
+    {
+      "id": "s9",
+      "text": "Under every answer, a ledger shows what each Clocked call changed, with its request, its response, and the credits it used. Nothing is mocked. These are recorded Clocked responses, and with your own key, every call runs live from the browser."
+    },
+    {
+      "id": "s10",
+      "text": "Proofdesk. Every source screened. Every answer checked. Nine Clocked endpoints, each with a job."
+    }
+  ]
+}

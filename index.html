@@ -75,7 +75,7 @@
 
   <section class="band" id="checkpoints">
     <div class="wrap split">
-      <div class="split-art"><img src="assets/img/art-sources.jpg" alt=""></div>
+      <figure class="split-ui"><img src="assets/img/ui-sources.jpg" alt="Source check: the printer article's script, flagged by Inspect as unsafe remote code execution, is withheld" width="708" height="640"></figure>
       <div class="split-copy">
         <div class="kicker"><span class="cp-tag">1</span>Source check · when documents are imported</div>
         <h2>Nothing reaches the assistant unscreened.</h2>
@@ -91,7 +91,7 @@
       </div>
     </div>
     <div class="wrap split reverse">
-      <div class="split-art"><img src="assets/img/art-answers.jpg" alt=""></div>
+      <figure class="split-ui"><img src="assets/img/ui-answers.jpg" alt="Answer check: Proofdesk answers 30 days from the India policy while the unchecked desk gives the US 5-day rule, which Verify marks as contradicted" width="1040" height="578"></figure>
       <div class="split-copy">
         <div class="kicker"><span class="cp-tag">2</span>Answer check · on every question</div>
         <h2>Every claim is tied to a source, or it does not ship.</h2>
@@ -135,13 +135,14 @@
         <div class="kicker">Failure handling</div>
         <h2>When a result is uncertain, Proofdesk fails closed.</h2>
       </div>
-      <div class="rel-grid">
-        <div class="rel"><i data-icon="fileLock"></i><div><h3>Privacy check fails</h3><p>The document is not indexed. Nothing unmasked reaches the assistant.</p></div></div>
-        <div class="rel"><i data-icon="code"></i><div><h3>A script cannot be inspected</h3><p>It is withheld, exactly as if it had failed.</p></div></div>
-        <div class="rel"><i data-icon="scale"></i><div><h3>Verify fails or support is low</h3><p>An unverified draft never ships; it goes to a person. Under 50% support, an answer carries conditions.</p></div></div>
-        <div class="rel"><i data-icon="compare"></i><div><h3>Compare fails</h3><p>Answers still work, with a visible warning that versions were not checked.</p></div></div>
-        <div class="rel"><i data-icon="route"></i><div><h3>No passage applies</h3><p>Nothing is drafted. The question goes to the right team instead of being guessed at.</p></div></div>
-        <div class="rel"><i data-icon="history"></i><div><h3>Busy or interrupted requests</h3><p>Retried with backoff under the same idempotency key; input errors are shown, never retried blindly.</p></div></div>
+      <div class="fc-table">
+        <div class="fc-row fc-head"><div>If this happens</div><div>Proofdesk does this</div></div>
+        <div class="fc-row"><div>The privacy check fails for a document</div><div>The document is not indexed, so nothing unmasked can reach the assistant.</div></div>
+        <div class="fc-row"><div>A script cannot be inspected</div><div>It is withheld, exactly as if it had failed.</div></div>
+        <div class="fc-row"><div>Verify fails, or support is under 50%</div><div>An unverified draft never ships and goes to a person; a weakly supported one carries conditions.</div></div>
+        <div class="fc-row"><div>Compare fails</div><div>Answers still work, with a visible warning that versions were not checked.</div></div>
+        <div class="fc-row"><div>No passage applies to the employee</div><div>Nothing is drafted; Decide routes the question to the right team.</div></div>
+        <div class="fc-row"><div>Clocked is busy or a request is interrupted</div><div>Retried with backoff under the same idempotency key; input errors are shown, never retried blindly.</div></div>
       </div>
     </div>
   </section>

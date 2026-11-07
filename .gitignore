@@ -5,3 +5,11 @@ Thumbs.db
 video/build/
 video/raw/
 *.log
+video/art/
+video/ui-*.png
+video/vo/
+video/cap/
+video/tmp/
+video/*.mp3
+video/*.wav
+video/shots/

@@ -373,7 +373,10 @@ function docLedger(doc, final) {
   if (md) {
     const got = [md.version ? `version ${esc(md.version.value)}` : 'no version', md.effectiveIso ? `effective ${esc(formatDate(md.effectiveIso))}` : 'no effective date', md.owner ? `owner ${esc(md.owner.value)}` : 'no owner'];
     add('extract', `Read ${got.join(' · ')}.`,
-      md.effectiveIso ? 'The effective date decides which version stays in force when documents conflict.' : '<b>No effective date</b>, so this document can never retire another one automatically.');
+      !md.effectiveIso ? '<b>No effective date</b>, so this document can never retire another one automatically.'
+        : (final && state.library.conflicts.some((c) => c.resolution.kind === 'superseded' && (c.resolution.older === doc.id || c.resolution.newer === doc.id))
+          ? '<b>The effective date settled a conflict</b> between two versions of this policy (see Compare below).'
+          : 'Kept as provenance. The date would settle any conflict with another version.'));
   }
   if (doc.pii) {
     const n = doc.pii.entities.length;
@@ -442,6 +445,8 @@ function renderViewer() {
     ${md !== undefined || doc.failed ? `<div class="ledger">${docLedger(doc, final)}</div>` : ''}
     <div class="legend"><span class="l-meta">Read by Extract</span><span class="l-pii">Masked by Protect</span><span class="l-inj">Flagged by Guard or Inspect</span><span class="l-conflict">Conflict found by Compare</span></div>
     <div class="doc-text">${renderMarked(doc.raw, docMarks(doc))}</div>`;
+  const first = el.querySelector('.doc-text .m-script-bad, .doc-text .m-inj, .doc-text .m-pii, .doc-text .m-conflict');
+  if (first) { const box = el.querySelector('.doc-text'); box.scrollTop = Math.max(0, first.offsetTop - box.offsetTop - 70); }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -463,7 +468,7 @@ const SCENARIO_ICONS = {
   sensitive: 'message', personal: 'fingerprint', manipulation: 'ban',
 };
 const SCENARIO_TAGS = {
-  regional: ['rerank'], outdated: ['compare', 'extract'], 'unsafe-fix': ['script', 'decide'],
+  regional: ['rerank'], outdated: ['compare', 'extract'], poisoned: ['injection'], 'unsafe-fix': ['script', 'decide'],
   sensitive: ['decide'], personal: ['pii'], manipulation: ['injection'],
 };
 
@@ -548,6 +553,10 @@ const CHECK_STEPS = ASK_STEPS.filter((s) => ['screen', 'search', 'rerank', 'veri
 // Which steps changed the outcome in this run: 'act' (stepped in), 'warn', 'bad' or plain pass-through.
 function stepTone(key, r) {
   if (key === 'screen' && r.screen) return r.screen.guard.flagged ? 'bad' : (r.screen.entities.length ? 'act' : '');
+  if (key === 'search' && r.baseline && state.library) {
+    const excluded = new Set(state.library.docs.filter((d) => !d.searchable).map((d) => d.id));
+    return (r.baseline.passages || []).some((p) => excluded.has(p.docId)) ? 'act' : '';
+  }
   if (key === 'rerank' && r.retrieval) return r.retrieval.results.some((x) => x.reason === 'different_case') ? 'act' : '';
   if (key === 'verify' && r.verify) {
     const s = verifySummary(r.verify);
@@ -571,7 +580,8 @@ function stepper(r) {
       st = bad ? `<span class="st state-bad">${icon('x', 11)}</span>` : `<span class="st state-ok">${icon(tone === 'bad' || tone === 'warn' ? 'alert' : 'check', 11)}</span>`;
     } else if (s?.status === 'error') { cls = 'error'; st = `<span class="st state-bad">${icon('alert', 11)}</span>`; }
     else if (s?.status === 'skipped' || (!s && !r.pending)) { cls = 'skipped'; st = `<span class="st state-pending">–</span>`; }
-    const sum = s?.status === 'error' ? 'Failed' : (s?.summary || (s?.status === 'running' ? (s.detail || 'Working…') : (cls === 'skipped' ? 'Not needed' : '')));
+    let sum = s?.status === 'error' ? 'Failed' : (s?.summary || (s?.status === 'running' ? (s.detail || 'Working…') : (cls === 'skipped' ? 'Not needed' : '')));
+    if (d.key === 'search' && cls.includes('tone-act')) sum = 'Quarantined and retired pages were never in the index';
     return `<div class="stp ${cls}"><div class="top"><span class="name">${esc(d.name)}</span>${st}</div><div class="ep-row" style="margin-top:6px">${d.eps.map((e) => endpointTag(e)).join('')}</div><div class="sum">${esc(sum)}</div><div class="bar"></div></div>`;
   }).join('')}</div>`;
 }
@@ -581,6 +591,19 @@ function maskedQuestion(r) {
   if (!s || !s.entities.length) return '';
   const html = esc(s.masked).replace(/&lt;([A-Z_]+)&gt;/g, '<span class="tok">$1</span>');
   return `<div class="masked-q">${icon('mask', 14)} Sent on as: ${html}</div>`;
+}
+
+function indexNote() {
+  if (!state.library) return '';
+  const docs = state.library.docs;
+  const out = docs.filter((d) => !d.searchable);
+  const why = (d) => (d.flags.includes('quarantined') ? 'quarantined by Guard' : d.flags.includes('superseded') ? 'retired by Compare' : 'failed screening');
+  return `<div class="index-note">${icon('shield', 15)}<span>Answering from <b>${docs.length - out.length} of ${docs.length}</b> documents.${out.length ? ` Kept out by the source check: ${out.map((d) => `<b>${esc(d.title)}${verOf(d) ? ' ' + esc(verOf(d)) : ''}</b> (${why(d)})`).join(', ')}.` : ''}</span></div>`;
+}
+
+function verOf(d) {
+  const v = d?.metadata?.version?.value;
+  return v && /^\d/.test(v) ? 'v' + v : '';
 }
 
 function questionCard(r) {
@@ -698,7 +721,7 @@ function proofdeskCard(r) {
   ].join('');
   const all = r.retrieval?.results || [];
   const srcRow = (x) => `
-      <div class="src"><div class="nm"><button type="button" data-passage="${esc(x.id)}">${esc(x.passage?.title || x.id)}</button><span class="kw">keyword #${x.keywordRank ?? '–'}</span></div>
+      <div class="src"><div class="nm"><button type="button" data-passage="${esc(x.id)}">${esc(passageLabel(x.passage) || x.id)}</button><span class="kw">keyword #${x.keywordRank ?? '–'}</span></div>
       <div class="right">${rerankChip(x)}${meter(x.relevance_score, x.action === 'use' ? 'ok' : 'neutral')}</div></div>`;
   const usedRows = all.filter((x) => x.action === 'use');
   const setAside = all.filter((x) => x.action !== 'use')
@@ -724,6 +747,15 @@ function proofdeskCard(r) {
     ${keyRule}${facts}${srcHtml}</div>`;
 }
 
+function passageLabel(p) {
+  if (!p) return '';
+  const d = state.library?.docs.find((x) => x.id === p.docId);
+  const v = verOf(d);
+  if (!v) return p.title;
+  const [docTitle, ...rest] = p.title.split(' · ');
+  return [`${docTitle} ${v}`, ...rest].join(' · ');
+}
+
 function rerankChip(x) {
   if (x.action === 'use') return '<span class="chip chip-ok">Use</span>';
   if (x.action === 'expand') return '<span class="chip chip-info">Answer is elsewhere in it</span>';
@@ -744,7 +776,7 @@ function baselineDangers(b, r) {
     if (p.hasScript && d?.scriptCheck?.flagged) tags.push(['chip-bad', 'Unsafe script']);
     if (d?.pii?.entities?.length && d.pii.entities.some((e) => p.text.includes(e.value))) tags.push(['chip-violet', 'Personal data']);
     if (rr[id]?.reason === 'different_case') tags.push(['chip-warn', 'Different case']);
-    out.push(`<div class="src baseline-src"><div class="nm"><button type="button" data-passage="${esc(p.id)}">${esc(p.title)}</button></div><div class="right">${tags.map((t) => `<span class="chip ${t[0]}">${t[1]}</span>`).join('') || '<span class="chip chip-neutral">No issue found</span>'}</div></div>`);
+    out.push(`<div class="src baseline-src"><div class="nm"><button type="button" data-passage="${esc(p.id)}">${esc(passageLabel(p))}</button></div><div class="right">${tags.map((t) => `<span class="chip ${t[0]}">${t[1]}</span>`).join('') || '<span class="chip chip-neutral">No issue found</span>'}</div></div>`);
   }
   return out.join('');
 }
@@ -862,7 +894,7 @@ function renderResult() {
   }
   const showBaseline = r.kind === 'ask' && r.compare && r.steps.baseline;
   const main = r.kind === 'check' ? checkCard(r) : proofdeskCard(r);
-  el.innerHTML = questionCard(r) + stepper(r)
+  el.innerHTML = questionCard(r) + indexNote() + stepper(r)
     + `<div class="compare-grid ${showBaseline ? '' : 'single'}">${main}${showBaseline ? baselineCard(r) : ''}</div>`
     + ledgerCard(r);
 }
