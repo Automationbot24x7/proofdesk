@@ -25,9 +25,9 @@ for (const s of [180, 512]) {
   await render(`<body style="margin:0;background:transparent"><img src="${mark}" width="${s}" height="${s}" style="display:block"></body>`, s, s, `${root}/assets/img/icon-${s}.png`);
 }
 const lockup = `<!doctype html><html><head><link href="https://fonts.googleapis.com/css2?family=Inter:wght@650&display=swap" rel="stylesheet"></head>
-<body style="margin:0;background:transparent;font-family:Inter,sans-serif"><div style="display:flex;align-items:center;gap:14px;padding:6px 4px;font-weight:650;font-size:40px;letter-spacing:-0.025em;color:#0d1524">
-<img src="${mark}" width="56" height="56">Proofdesk</div></body></html>`;
-await render(lockup, 300, 68, `${root}/assets/img/lockup.png`, 2);
+<body style="margin:0;background:transparent;font-family:Inter,sans-serif"><div style="display:flex;align-items:flex-end;padding:6px 4px;font-weight:650;letter-spacing:-0.03em;line-height:1;color:#0d1524">
+<img src="${mark}" width="56" height="56" style="margin-right:2px"><span style="font-size:48px;padding-bottom:6.5px">roofdesk</span></div></body></html>`;
+await render(lockup, 270, 68, `${root}/assets/img/lockup.png`, 2);
 await unlink(`${root}/video/tmp-render.html`).catch(() => {});
 b.close();
 process.exit(0);

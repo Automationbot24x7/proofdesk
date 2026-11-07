@@ -574,3 +574,11 @@ button.stat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2p
 .scenario .h { line-height: 1.32; font-size: 12px; }
 .scenarios { gap: 5px; }
 .sc-ic { width: 28px; height: 28px; }
+
+/* Logo lockup: the mark is the P of "Proofdesk" */
+.lockup { display: inline-flex; align-items: flex-end; font-weight: 650; letter-spacing: -0.03em; line-height: 1; color: inherit; }
+.lockup img { display: block; width: var(--m, 28px); height: var(--m, 28px); margin-right: calc(var(--m, 28px) * .04); flex: none; }
+.lockup .lk-word { font-size: calc(var(--m, 28px) * .86); padding-bottom: calc(var(--m, 28px) * .115); }
+.brand { gap: 0; }
+.brand small { margin-left: 14px; }
+.answer-card h3 .lockup { font-size: inherit; }

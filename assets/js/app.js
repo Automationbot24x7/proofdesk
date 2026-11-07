@@ -683,7 +683,7 @@ function routeBlock(r) {
 }
 
 function proofdeskCard(r) {
-  const head = `<div class="card-head"><h3><img src="assets/img/mark.svg" alt="" width="18" height="18">Proofdesk</h3><span class="faint" style="font-size:12.5px">Checked sources · checked answer</span></div>`;
+  const head = `<div class="card-head"><h3><span class="lockup" style="--m:20px"><img src="assets/img/mark.svg" alt=""><span class="lk-word" aria-hidden="true">roofdesk</span><span class="sr-only">Proofdesk</span></span></h3><span class="faint" style="font-size:12.5px">Checked sources · checked answer</span></div>`;
   if (r.pending && !r.steps.route?.status?.match(/done|error/)) {
     const err = Object.values(r.steps).find((s) => s.status === 'error');
     return `<div class="card answer-card">${head}<div class="answer-body">${err ? errorBox(err.error) : '<span class="spin"></span> <span class="muted">Checking…</span>'}</div></div>`;
