@@ -5,7 +5,7 @@
 **Make your knowledge base safe to answer from.** Proofdesk screens every HR and IT document before an AI help desk can read it, then checks every answer against those documents before an employee sees it. Every step is a [Clocked](https://clocked.rezolve.ai) call whose result changes what happens next.
 
 - **Live demo:** https://automationbot24x7.github.io/proofdesk/ (works without a key using recorded responses; add your own Clocked key to run everything live)
-- **Demo video (2–3 min):** https://automationbot24x7.github.io/proofdesk/#video
+- **Demo video (2 min 48 s):** https://automationbot24x7.github.io/proofdesk/#video (file: [assets/video/proofdesk-demo.mp4](assets/video/proofdesk-demo.mp4))
 - Built for the Clocked Build Challenge (Rezolve.ai), 8–10 November 2026.
 
 ## The problem

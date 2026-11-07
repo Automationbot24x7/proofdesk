@@ -46,7 +46,7 @@ def caption(s):
             f"drawtext=fontfile={FONT}:text='{esc(CAPTIONS[s])}':fontsize=36:fontcolor=0xf2f4fb:x=(w-tw)/2:y=h-62")
 
 
-ENC = ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'medium', '-crf', '18', '-r', '30']
+ENC = ['-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-preset', 'slow', '-crf', '21', '-r', '30']
 FIT = 'scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,setsar=1'
 
 
@@ -58,7 +58,7 @@ def dur(path):
 
 def screen(s, d, out):
     run('-f', 'concat', '-safe', '0', '-i', f'video/cap/{s}/list.txt', '-t', str(d),
-        '-vf', f'{FIT},fps=30{caption(s)}', *ENC, out)
+        '-vf', f'{FIT}{caption(s)}', '-fps_mode', 'cfr', *ENC, out)  # cfr keeps long holds; the fps filter drops the first
 
 
 def still(img, d, out, s):

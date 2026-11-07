@@ -36,17 +36,24 @@ const click = (sel) => evaluate(`document.querySelector(${J(sel)})?.click()`);
 const scrollTo = (sel, block = 'center') => evaluate(`document.querySelector(${J(sel)})?.scrollIntoView({behavior:"smooth",block:"${block}"})`);
 const scrollTop = () => evaluate('window.scrollTo({top:0,behavior:"smooth"})');
 // Smoothly zoom the page so the element fills most of the frame (leaving room for the caption bar).
+// The transform uses origin 0 0 and the current zoom is remembered, so zooms can chain without jumps:
+// the element's untransformed position is recovered from the transformed one before the next zoom.
 const zoomEl = (expr, max = 1.8, ms = 1100) => evaluate(`(()=>{const e=${expr}; if(!e) return 0;
-  const r=e.getBoundingClientRect(), vw=innerWidth, vh=innerHeight-86;
-  const s=Math.max(1.04, Math.min(${max}, 0.92*vw/r.width, 0.9*vh/r.height));
-  const cx=r.left+r.width/2+scrollX, cy=r.top+r.height/2+scrollY;
-  const dx=vw/2-(r.left+r.width/2), dy=vh/2-(r.top+r.height/2);
-  const bd=document.body; bd.style.transition="transform ${ms}ms cubic-bezier(.45,0,.2,1)"; bd.style.transformOrigin=cx+"px "+cy+"px";
-  bd.style.transform="translate("+dx+"px,"+dy+"px) scale("+s+")";
-  for (const t of document.querySelectorAll(".topbar,.lp-top")) { t.style.transition="opacity .3s"; t.style.opacity=0; }
+  const z = window.__z || { s: 1, tx: 0, ty: 0 };
+  const r = e.getBoundingClientRect();
+  const left = (r.left + scrollX - z.tx) / z.s, top = (r.top + scrollY - z.ty) / z.s;
+  const w = r.width / z.s, h = r.height / z.s;
+  const vw = innerWidth, vh = innerHeight - 86;
+  const s = Math.max(1.04, Math.min(${max}, 0.92 * vw / w, 0.9 * vh / h));
+  const tx = scrollX + vw / 2 - (left + w / 2) * s, ty = scrollY + vh / 2 - (top + h / 2) * s;
+  const bd = document.body; bd.style.transformOrigin = "0 0";
+  bd.style.transition = "transform ${ms}ms cubic-bezier(.45,0,.2,1)";
+  bd.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + s + ")";
+  window.__z = { s, tx, ty };
+  for (const t of document.querySelectorAll(".topbar,.lp-top")) { t.style.transition = "opacity .3s"; t.style.opacity = 0; }
   return s})()`);
 const zoomTo = (sel, max, ms) => zoomEl(`document.querySelector(${J(sel)})`, max, ms);
-const unzoom = (ms = 900) => evaluate(`(()=>{const bd=document.body; bd.style.transition="transform ${ms}ms cubic-bezier(.45,0,.2,1)"; bd.style.transform="";
+const unzoom = (ms = 900) => evaluate(`(()=>{const bd=document.body; bd.style.transition="transform ${ms}ms cubic-bezier(.45,0,.2,1)"; bd.style.transform=""; window.__z = null;
   for (const t of document.querySelectorAll(".topbar,.lp-top")) t.style.opacity=1;})()`);
 const ledgerItem = (text) => `[...document.querySelectorAll(".viewer .ledger-item")].find(e=>e.textContent.includes(${J(text)}))`;
 const pdCard = `document.querySelector(".compare-grid > .answer-card:not(.baseline-card)")`;
@@ -77,7 +84,8 @@ async function record(name, action) {
   onFrame = null;
   await act;
   await unzoom(0);
-  const lines = ['ffconcat version 1.0'];
+  // ffmpeg's concat demuxer drops the first entry's hold time, so the first frame is listed twice.
+  const lines = ['ffconcat version 1.0', `file '${path.basename(frames[0].f)}'`, 'duration 0.001'];
   frames.forEach((fr, i) => {
     const next = i + 1 < frames.length ? frames[i + 1].t : seconds * 1000;
     lines.push(`file '${path.basename(fr.f)}'`, `duration ${((next - fr.t) / 1000).toFixed(3)}`);

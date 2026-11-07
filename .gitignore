@@ -13,3 +13,6 @@ video/tmp/
 video/*.mp3
 video/*.wav
 video/shots/
+video/check/
+video/endcard.png
+video/durations.json
