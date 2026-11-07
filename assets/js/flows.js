@@ -527,7 +527,7 @@ export async function decideRoute(client, state) {
 }
 
 const ROUTE_GUARD = 0.5;
-const pct = (x) => `${Math.round((x || 0) * 100)}%`;
+const pct = (x) => { const v = (x || 0) * 100; return `${v >= 99.5 || (v > 0 && v < 0.5) ? v.toFixed(1) : Math.round(v)}%`; };
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 function screenImpact(s) {
