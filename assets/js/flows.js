@@ -203,12 +203,15 @@ export async function compareDocuments(client, docs) {
   return { data, meta, request: body };
 }
 
-export async function screenLibrary(client, handbook, { onStep = () => {} } = {}) {
+export async function screenLibrary(client, handbook, { onStep = () => {}, onDoc = () => {} } = {}) {
   const started = Date.now();
   onStep({ key: 'screen-docs', status: 'running', title: 'Screen every document', endpoint: 'pipeline',
     detail: `${handbook.docs.length} documents · Extract + Protect + Guard + Inspect` });
 
-  const settled = await Promise.allSettled(handbook.docs.map((d) => screenDocument(client, d)));
+  const settled = await Promise.allSettled(handbook.docs.map((d) => screenDocument(client, d).then(
+    (x) => { onDoc(x); return x; },
+    (err) => { onDoc({ ...d, failed: true, failure: err }); throw err; },
+  )));
   const docs = settled.map((s, i) => {
     if (s.status === 'fulfilled') return s.value;
     return { ...handbook.docs[i], failed: true, failure: s.reason, errors: [s.reason?.message || 'Screening failed'] };
@@ -407,23 +410,44 @@ function sourcesText(passages) {
   return { text, ranges };
 }
 
+const ANSWER_FIELD = {
+  type: 'generate',
+  description: 'A direct answer to the employee question in two to four short sentences, using only the sources. '
+    + 'State the exact limits, amounts, deadlines and approvals the sources give. If the sources do not cover part '
+    + 'of the question, say the handbook does not say.',
+  format: 'text',
+  max_tokens: 160,
+};
+
+const draftInstructions = (question, profile) =>
+  `Employee question: ${question}\nThe employee is a ${profile.employment.toLowerCase()} based in ${profile.country}.\n`
+  + 'Answer only from the numbered sources, which are sections of the company handbook. Do not use outside '
+  + 'knowledge. Keep numbers, limits, deadlines and approvals exactly as the sources state them.';
+
+// What a desk without checkpoints would say: every document as written (personal data, the poisoned FAQ,
+// the retired policy and the unsafe script all included), keyword search only, the same Fill draft.
+export function uncheckedPassages(library) {
+  return library.docs.flatMap((d) => splitPassages(d, d.raw, { title: d.title || d.heading })
+    .map((p) => ({ ...p, id: 'raw:' + p.id })));
+}
+
+export async function uncheckedAnswer(client, library, question, profile) {
+  const hits = keywordSearch(uncheckedPassages(library), question, 3);
+  if (!hits.length) return { hits, answer: '', passages: [] };
+  const passages = hits.map((h) => h.passage);
+  const { text } = sourcesText(passages);
+  const body = { text, instructions: draftInstructions(question, profile), fields: { answer: ANSWER_FIELD } };
+  const { data, meta } = await client.call('fill', body);
+  return { meta, request: body, response: data, hits, passages, answer: (data.fields?.answer?.value || '').trim() };
+}
+
 export async function draftAnswer(client, question, profile, passages) {
   const { text, ranges } = sourcesText(passages);
   const body = {
     text,
-    instructions:
-      `Employee question: ${question}\nThe employee is a ${profile.employment.toLowerCase()} based in ${profile.country}.\n`
-      + 'Answer only from the numbered sources, which are sections of the company handbook. Do not use outside '
-      + 'knowledge. Keep numbers, limits, deadlines and approvals exactly as the sources state them.',
+    instructions: draftInstructions(question, profile),
     fields: {
-      answer: {
-        type: 'generate',
-        description: 'A direct answer to the employee question in two to four short sentences, using only the sources. '
-          + 'State the exact limits, amounts, deadlines and approvals the sources give. If the sources do not cover part '
-          + 'of the question, say the handbook does not say.',
-        format: 'text',
-        max_tokens: 160,
-      },
+      answer: ANSWER_FIELD,
       key_rule: {
         type: 'extract',
         description: 'The sentence from the sources that most directly answers the employee question',
@@ -496,10 +520,88 @@ export async function decideRoute(client, state) {
 }
 
 const ROUTE_GUARD = 0.5;
+const pct = (x) => `${Math.round((x || 0) * 100)}%`;
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-export async function ask(client, library, { question, profile = DEFAULT_PROFILE }, { onStep = () => {} } = {}) {
+function screenImpact(s) {
+  const masked = s.entities.length
+    ? `Masked ${plural(s.entities.length, 'personal detail')} (${[...new Set(s.entities.map((e) => e.type))].join(', ')}). Only the masked question is searched and logged.`
+    : 'No personal data found, so the question is passed on unchanged.';
+  const guard = s.guard.flagged
+    ? `Guard: ${s.guard.category} (${s.guard.severity || 'flagged'}, ${pct(s.guard.injection)}). The question is blocked and nothing is searched.`
+    : `Guard: no injection (${pct(s.guard.injection)} risk).`;
+  return `${masked} ${guard}`;
+}
+
+function rerankImpact(results) {
+  const use = results.filter((r) => r.action === 'use');
+  const diff = results.filter((r) => r.reason === 'different_case');
+  const parts = [`Kept ${plural(use.length, 'passage')} for the draft`];
+  if (diff.length) {
+    const names = [...new Set(diff.map((r) => r.passage?.title.split(' · ')[0]))].slice(0, 2).join('; ');
+    parts.push(`dropped ${diff.length} written for a different case (${names})`);
+  }
+  const unrelated = results.filter((r) => r.reason === 'unrelated').length;
+  if (unrelated) parts.push(`${unrelated} unrelated`);
+  const exp = results.filter((r) => r.action === 'expand').length;
+  if (exp) parts.push(`${exp} pointed elsewhere in the same document`);
+  return parts.join(', ') + '.';
+}
+
+export function verifySummary(v) {
+  const claims = (v?.claims || []).filter((c) => c.counted !== false && c.kind !== 'not_a_claim');
+  const by = (k) => claims.filter((c) => c.verdict === k).length;
+  return { total: claims.length, supported: by('supported'), contradicted: by('contradicted'), notStated: by('not_stated'), grounded: v?.grounded || 0 };
+}
+
+function verifyImpact(v, { removes = true } = {}) {
+  const s = verifySummary(v);
+  const parts = [`${s.supported} of ${s.total} claims supported (${pct(s.grounded)} of the answer by length)`];
+  if (s.contradicted) parts.push(removes ? `${plural(s.contradicted, 'contradicted claim')} removed from the answer` : `${plural(s.contradicted, 'claim')} contradicted by the handbook`);
+  if (s.notStated) parts.push(`${s.notStated} marked "not in the handbook"`);
+  return parts.join('; ') + '.';
+}
+
+export async function ask(client, library, { question, profile = DEFAULT_PROFILE, compare = true }, { onStep = () => {} } = {}) {
   const out = { kind: 'ask', question, profile, startedAt: nowIso(), steps: {} };
   const step = (e) => { out.steps[e.key] = { ...(out.steps[e.key] || {}), ...e }; onStep(e); };
+
+  // The unchecked desk runs alongside, from the raw question and the raw documents.
+  let baselinePromise = null;
+  if (compare) {
+    step({ key: 'baseline', status: 'running', title: 'Unchecked desk drafts an answer', endpoint: 'fill', lane: 'baseline',
+      detail: 'Raw documents, keyword search only' });
+    baselinePromise = uncheckedAnswer(client, library, question, profile).then(
+      (b) => {
+        out.baseline = b;
+        step({ key: 'baseline', status: b.answer ? 'done' : 'skipped', credits: b.meta?.credits, meta: b.meta,
+          request: b.request, response: b.response,
+          summary: b.answer ? `From ${b.passages.map((p) => p.title).join('; ')}` : 'No passage matched',
+          impact: 'Used the top 3 keyword matches as written: no masking, no quarantine, no version check, no rerank.' });
+        return b;
+      },
+      (err) => { step({ key: 'baseline', status: 'error', error: err }); out.baselineError = err; return null; },
+    );
+  }
+  const finishBaseline = async (usedPassages, query) => {
+    if (!baselinePromise) return;
+    const b = await baselinePromise;
+    if (!b?.answer || !usedPassages?.length) {
+      step({ key: 'baseline-verify', status: 'skipped', lane: 'baseline', title: 'Check the unchecked answer',
+        summary: usedPassages?.length ? 'No unchecked answer to check' : 'No checked sources to compare against' });
+      return;
+    }
+    step({ key: 'baseline-verify', status: 'running', title: 'Check the unchecked answer', endpoint: 'grounding', lane: 'baseline' });
+    try {
+      out.baselineVerify = await verifyAnswer(client, query, b.answer, usedPassages);
+      step({ key: 'baseline-verify', status: 'done', credits: out.baselineVerify.meta.credits, meta: out.baselineVerify.meta,
+        request: out.baselineVerify.request, response: out.baselineVerify.response,
+        summary: `${pct(out.baselineVerify.grounded)} supported`,
+        impact: verifyImpact(out.baselineVerify, { removes: false }) + ' Checked against the passages Proofdesk selected.' });
+    } catch (err) {
+      step({ key: 'baseline-verify', status: 'error', error: err });
+    }
+  };
 
   // 1. Protect + Guard on the question, in one Pipeline call.
   step({ key: 'screen', status: 'running', title: 'Screen the question', endpoint: 'pipeline', detail: 'Protect + Guard' });
@@ -508,14 +610,18 @@ export async function ask(client, library, { question, profile = DEFAULT_PROFILE
   } catch (err) {
     step({ key: 'screen', status: 'error', error: err });
     out.error = err; out.route = { key: 'error', reason: err.message };
+    await finishBaseline(null);
     return out;
   }
   const s = out.screen;
   step({ key: 'screen', status: 'done', credits: s.meta.credits, meta: s.meta, request: s.request, response: s.response,
-    summary: (s.entities.length ? `${s.entities.length} personal detail${s.entities.length > 1 ? 's' : ''} masked` : 'No personal data')
-      + ' · ' + (s.guard.flagged ? `blocked: ${s.guard.category}` : 'no injection') });
+    summary: (s.entities.length ? `${plural(s.entities.length, 'personal detail')} masked` : 'No personal data')
+      + ' · ' + (s.guard.flagged ? `blocked: ${s.guard.category}` : 'no injection'),
+    impact: screenImpact(s) });
   if (s.guard.flagged) {
-    out.route = { key: 'blocked', reason: `The question tries to change how Proofdesk behaves (${s.guard.category}).` };
+    out.route = { key: 'blocked', reason: `The question tries to change how the help desk behaves (${s.guard.category}).` };
+    await finishBaseline(null);
+    out.finishedAt = nowIso();
     return out;
   }
   const query = s.masked;
@@ -523,22 +629,29 @@ export async function ask(client, library, { question, profile = DEFAULT_PROFILE
   // 2. Keyword search, then Rerank with the employee's profile as context.
   try {
     out.retrieval = await retrieve(client, library, query, profile, { onStep: step });
+    step({ key: 'rerank', impact: rerankImpact(out.retrieval.results) });
   } catch (err) {
     step({ key: 'rerank', status: 'error', error: err });
     out.error = err;
     out.route = { key: 'people_team', reason: 'Passages could not be ranked, so no answer was drafted.' };
+    await finishBaseline(null);
     return out;
   }
   const used = out.retrieval.used;
+  const baselineCheck = finishBaseline(used, query);
+
   if (!used.length) {
     for (const k of ['draft', 'verify']) step({ key: k, status: 'skipped', summary: 'No passage answers this question' });
   } else {
     // 3. Fill drafts the answer and reads a few typed fields from the passages.
-    step({ key: 'draft', status: 'running', title: 'Draft the answer', endpoint: 'fill', detail: `${used.length} source passage${used.length > 1 ? 's' : ''}` });
+    step({ key: 'draft', status: 'running', title: 'Draft the answer', endpoint: 'fill', detail: `${plural(used.length, 'source passage')}` });
     try {
       out.draft = await draftAnswer(client, query, profile, used);
+      const f = out.draft.fields;
       step({ key: 'draft', status: 'done', credits: out.draft.meta.credits, meta: out.draft.meta, request: out.draft.request,
-        response: out.draft.response, summary: `Topic: ${out.draft.fields.topic?.value || 'n/a'}` });
+        response: out.draft.response, summary: `Topic: ${f.topic?.value || 'n/a'}`,
+        impact: `Drafted from ${plural(used.length, 'checked passage')}. Sources answer fully: ${f.fully_answered?.value ? 'yes' : 'no'}; `
+          + `approval needed: ${f.approval_needed?.value ? 'yes' : 'no'}; key rule quoted ${out.draft.keyRule ? 'word for word' : '(none found)'}.` });
     } catch (err) {
       step({ key: 'draft', status: 'error', error: err });
       out.error = err;
@@ -548,11 +661,11 @@ export async function ask(client, library, { question, profile = DEFAULT_PROFILE
       step({ key: 'verify', status: 'running', title: 'Check every claim', endpoint: 'grounding' });
       try {
         out.verify = await verifyAnswer(client, query, out.draft.answer, used);
-        const claims = out.verify.claims || [];
-        const bad = claims.filter((c) => c.counted !== false && c.verdict !== 'supported').length;
+        const vs = verifySummary(out.verify);
         step({ key: 'verify', status: 'done', credits: out.verify.meta.credits, meta: out.verify.meta,
           request: out.verify.request, response: out.verify.response,
-          summary: `${Math.round((out.verify.grounded || 0) * 100)}% supported · ${bad} claim${bad === 1 ? '' : 's'} flagged` });
+          summary: `${pct(vs.grounded)} supported · ${plural(vs.total - vs.supported, 'claim')} flagged`,
+          impact: verifyImpact(out.verify) });
       } catch (err) {
         step({ key: 'verify', status: 'error', error: err, summary: 'Not verified, so the draft is not shown as an answer' });
         out.verifyError = err;
@@ -570,6 +683,7 @@ export async function ask(client, library, { question, profile = DEFAULT_PROFILE
     employee: `${profile.employment} in ${profile.country}`,
     topic: out.draft?.fields?.topic?.value || 'unknown',
     handbook_passages_used: used.map((p) => p.title),
+    withheld_content: used.some((p) => p.scriptWithheld) ? 'A troubleshooting script in these passages failed a safety inspection and was removed.' : 'none',
     draft_answer: out.draft?.answer || null,
     answer_check: out.verify
       ? {
@@ -591,15 +705,19 @@ export async function ask(client, library, { question, profile = DEFAULT_PROFILE
     } else if (out.verify && (out.verify.grounded || 0) < ROUTE_GUARD && key === 'answer') {
       key = 'answer_with_conditions'; reason = 'Less than half of the draft is supported, so it is shown with conditions.';
     }
-    out.route = { key, decided: r.choice, confidence: r.confidence, probabilities: r.probabilities, reason,
-      concerns: out.decision.answers.concerns?.selected || [] };
+    const concerns = out.decision.answers.concerns?.selected || [];
+    out.route = { key, decided: r.choice, confidence: r.confidence, probabilities: r.probabilities, reason, concerns };
     step({ key: 'route', status: 'done', credits: out.decision.meta.credits, meta: out.decision.meta,
       request: out.decision.request, response: out.decision.response,
-      summary: `${ROUTE_LABELS[key]?.short || key} · ${Math.round((r.confidence ?? r.probabilities?.[r.choice] ?? 0) * 100)}%` });
+      summary: `${ROUTE_LABELS[key]?.short || key} · ${pct(r.confidence ?? r.probabilities?.[r.choice])}`,
+      impact: `${ROUTE_LABELS[key]?.long || key} (${pct(r.probabilities?.[r.choice] ?? r.confidence)}).`
+        + (concerns.length ? ` Flags: ${concerns.map((c) => c.replace(/_/g, ' ')).join(', ')}.` : '')
+        + (reason ? ` ${reason}` : '') });
   } catch (err) {
     step({ key: 'route', status: 'error', error: err });
     out.route = { key: 'people_team', reason: 'Routing failed, so the question goes to a person.' };
   }
+  await baselineCheck;
   out.finishedAt = nowIso();
   return out;
 }

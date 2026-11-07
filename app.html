@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proofdesk · Demo workspace</title>
+  <meta name="description" content="Check a knowledge base before an AI help desk uses it, and check every answer before an employee sees it. Built on the Clocked API.">
+  <link rel="icon" href="assets/img/mark.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;680;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Proofdesk home">
+      <img class="mark" src="assets/img/mark.svg" alt="">
+      <span>Proofdesk</span>
+      <small>Kestrel Works · demo workspace</small>
+    </a>
+    <nav class="tabs" role="tablist" aria-label="Checkpoints">
+      <button class="tab" role="tab" id="tab-sources" data-view="sources" aria-selected="true"><span class="step-no">1</span>Source check</button>
+      <button class="tab" role="tab" id="tab-answers" data-view="answers" aria-selected="false"><span class="step-no">2</span>Answer check</button>
+    </nav>
+    <div class="top-right">
+      <span class="mode-pill" id="mode-pill"><span class="dot"></span><span id="mode-text">Recorded responses</span></span>
+      <button class="btn btn-sm" id="key-btn" type="button"></button>
+    </div>
+  </header>
+
+  <main class="page">
+    <!-- 1. Source check -->
+    <section class="view" id="view-sources" role="tabpanel" aria-labelledby="tab-sources">
+      <div class="view-head">
+        <div>
+          <div class="eyebrow">Checkpoint 1 · before an assistant can read a document</div>
+          <h1>Source check</h1>
+          <p>Every document is read for its effective date, personal data, hidden instructions and unsafe scripts in one Clocked Pipeline call, then all documents are compared to find rules that disagree. Only documents that pass are searchable.</p>
+        </div>
+        <button class="btn" id="rescan-btn" type="button"></button>
+      </div>
+      <div class="stats" id="stats"></div>
+      <div class="source-grid">
+        <div>
+          <div class="card doc-list" id="doc-list"></div>
+          <div class="card conflicts" id="conflicts"></div>
+        </div>
+        <div class="card viewer" id="viewer"></div>
+      </div>
+    </section>
+
+    <!-- 2. Answer check -->
+    <section class="view" id="view-answers" role="tabpanel" aria-labelledby="tab-answers" hidden>
+      <div class="view-head">
+        <div>
+          <div class="eyebrow">Checkpoint 2 · before an employee sees an answer</div>
+          <h1>Answer check</h1>
+          <p>Ask as an employee. The question is screened, passages are reranked for this person, the drafted answer is checked claim by claim against them, and a routing decision says whether the desk answers or a person does.</p>
+        </div>
+      </div>
+      <div class="answer-grid">
+        <aside class="side">
+          <div class="card card-body">
+            <div class="section-title">Asking as</div>
+            <div class="persona">
+              <div class="field"><label for="p-country">Country</label><select class="select" id="p-country"></select></div>
+              <div class="field"><label for="p-employment">Employment</label><select class="select" id="p-employment"></select></div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">Judge scenarios</div>
+            <div class="scenarios" id="scenarios"></div>
+          </div>
+          <div class="card card-body">
+            <div class="field">
+              <label for="question">Your own question</label>
+              <textarea class="textarea" id="question" placeholder="e.g. Can I take my laptop abroad for a two-week trip?"></textarea>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:10px; align-items:center; justify-content:space-between">
+              <label class="toggle"><input type="checkbox" id="compare-toggle" checked><span><b>Show an unchecked desk</b> side by side</span></label>
+              <button class="btn btn-primary" id="ask-btn" type="button">Check</button>
+            </div>
+            <details class="paste-box" id="paste-box">
+              <summary>Check an answer from another assistant</summary>
+              <textarea class="textarea" id="pasted" placeholder="Paste the answer another assistant gave to the question above."></textarea>
+              <button class="btn btn-sm" id="check-btn" type="button" style="margin-top:8px">Check this answer</button>
+            </details>
+          </div>
+        </aside>
+        <div id="result"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>Kestrel Works and its handbook are fictional; every document is synthetic. Responses come from the Clocked API, either live with your key or recorded from a real run.</span>
+    <span><a href="index.html">About Proofdesk</a> · <a href="https://github.com/Automationbot24x7/proofdesk">Source on GitHub</a></span>
+  </footer>
+
+  <div class="scrim" id="scrim"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true" aria-labelledby="drawer-title">
+    <div class="drawer-head">
+      <div><h3 id="drawer-title"></h3><div class="faint" id="drawer-sub" style="font-size:12.5px;margin-top:3px"></div></div>
+      <button class="btn btn-ghost btn-sm" id="drawer-close" type="button" aria-label="Close">Close</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </aside>
+
+  <dialog class="modal" id="key-dialog">
+    <form method="dialog">
+      <div class="modal-body">
+        <h3>Run Proofdesk live</h3>
+        <p>Paste your own Clocked API key to run every check live. The key stays in this browser tab and is sent only to clocked.rezolve.ai. A full answer check uses roughly 100 to 300 credits; a source check of all ten documents uses more.</p>
+        <input class="input" id="key-input" type="password" autocomplete="off" spellcheck="false" placeholder="Clocked API key">
+        <label class="toggle" style="margin-top:12px"><input type="checkbox" id="key-remember"><span>Keep it until this tab is closed</span></label>
+        <p class="fineprint">No key? Everything still works with recorded responses: real Clocked results saved from a run of this exact app, replayed request by request.</p>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" value="cancel" type="submit">Cancel</button>
+        <button class="btn btn-primary" id="key-save" value="save" type="submit">Use this key</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
