@@ -90,7 +90,10 @@ function route() {
   const s = params.get('s');
   if (state.view === 'answers' && s && state.samples) {
     const sample = state.samples.ask.find((x) => x.id === s);
-    if (sample && state.scenario !== s) setTimeout(() => runScenario(sample), 50);
+    if (sample && state.scenario !== s) {
+      if (state.library) setTimeout(() => runScenario(sample), 50);
+      else { state.pendingScenario = sample; markScenario(sample.id); }
+    }
   }
   const d = params.get('doc');
   if (d) { state.selectedDoc = d; renderSources(); }
@@ -170,6 +173,11 @@ async function runSourceCheck() {
   state.screening = false;
   renderSources();
   renderResult();
+  if (state.pendingScenario && state.library) {
+    const sample = state.pendingScenario;
+    state.pendingScenario = null;
+    runScenario(sample);
+  }
 }
 
 function docState(id) {
