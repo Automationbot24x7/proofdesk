@@ -1,0 +1,18 @@
+{
+  "company": "Kestrel Works",
+  "note": "Fictional company. Every document in this folder is synthetic and was written for the Proofdesk demo.",
+  "documents": [
+    { "id": "travel-2026", "file": "travel-expenses-2026.md" },
+    { "id": "travel-2025", "file": "travel-expenses-2025.md" },
+    { "id": "remote-work", "file": "remote-work.md" },
+    { "id": "leave-india", "file": "leave-india.md" },
+    { "id": "leave-uk", "file": "leave-uk.md" },
+    { "id": "leave-us", "file": "leave-us.md" },
+    { "id": "equipment", "file": "equipment.md" },
+    { "id": "contractors", "file": "contractor-guide.md" },
+    { "id": "onboarding-blr", "file": "onboarding-bengaluru.md" },
+    { "id": "it-vpn", "file": "it-vpn.md" },
+    { "id": "it-printer", "file": "it-printer.md" },
+    { "id": "benefits-faq", "file": "benefits-faq.md" }
+  ]
+}
