@@ -445,3 +445,17 @@ dialog.modal::backdrop { background: rgba(13, 21, 36, .4); }
   .stp:nth-child(even) { border-left: 1px solid var(--border) !important; }
   .footer { padding: 0 16px 32px; }
 }
+
+/* hand-off and held drafts */
+.handoff { margin: 14px 18px 4px; padding: 12px 14px; border-radius: 10px; background: var(--info-soft); color: #173f72; font-size: 14px; line-height: 1.5; }
+.handoff .k, .held summary { font-size: 11.5px; font-weight: 650; letter-spacing: .05em; text-transform: uppercase; }
+.handoff .k { color: var(--info); margin-bottom: 4px; }
+.held { margin: 12px 18px 0; border: 1px dashed var(--border-strong); border-radius: 10px; }
+.held summary { display: flex; align-items: center; gap: 6px; padding: 10px 12px; cursor: pointer; color: var(--text-2); list-style: none; }
+.held summary::-webkit-details-marker { display: none; }
+.held[open] summary .ic { transform: rotate(90deg); }
+.held .answer-body { padding-top: 4px; }
+.held .notes, .held .facts { padding-left: 12px; padding-right: 12px; }
+.held .keyrule { margin-left: 12px; margin-right: 12px; }
+.held + .sources { margin-top: 14px; }
+.script-pre { margin: 8px 0 0; padding: 10px 12px; background: #fff; border: 1px solid var(--bad-line); border-radius: 8px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; color: var(--text); }

@@ -11,7 +11,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createClient } from '../assets/js/clocked.js';
+import { createClient, requestHash } from '../assets/js/clocked.js';
 import { loadHandbook, screenLibrary, ask, checkAnswer, buildLibrary } from '../assets/js/flows.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -23,18 +23,34 @@ async function getKey() {
   return (await readFile(path.join(root, 'Credentials/clocked-key.txt'), 'utf8')).trim();
 }
 
-const [mode = 'all', arg] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const replay = args.includes('--replay');
+const [mode = 'all', arg] = args.filter((a) => !a.startsWith('--'));
 const recordings = existsSync(outFile) ? JSON.parse(await readFile(outFile, 'utf8')) : {};
 let credits = 0;
-const client = createClient({
-  key: await getKey(),
+const touched = new Set();
+const liveOrReplay = createClient({
+  ...(replay ? { mode: 'replay', recordings } : { key: await getKey() }),
   concurrency: 4,
   onRecord: (hash, entry) => { recordings[hash] = entry; },
   onCall: (e) => {
-    if (e.ok) { credits += e.meta.credits; console.log(`  ${e.endpoint.padEnd(9)} ${String(e.meta.credits).padStart(4)} cr ${String(e.meta.ms).padStart(6)} ms`); }
+    if (e.ok) { touched.add(e.hash); credits += e.meta.credits; console.log(`  ${e.endpoint.padEnd(9)} ${String(e.meta.credits).padStart(4)} cr ${String(e.meta.ms).padStart(6)} ms`); }
     else console.log(`  ${e.endpoint.padEnd(9)} ERROR ${e.error.message}`);
   },
 });
+// Cache: a request already recorded with exactly the same body is not sent again (pass --fresh to resend).
+const fresh = args.includes('--fresh');
+const cached = createClient({ mode: 'replay', recordings });
+const client = {
+  async call(endpoint, body) {
+    if (!replay && !fresh && await cached.hasRecording(endpoint, body)) {
+      const out = await cached.call(endpoint, body);
+      touched.add(await requestHash(endpoint, body));
+      return out;
+    }
+    return liveOrReplay.call(endpoint, body);
+  },
+};
 
 const log = (e) => { if (e.status === 'done' || e.status === 'error' || e.status === 'skipped') console.log(`[${e.key}] ${e.status} ${e.summary || e.error?.message || ''}`); };
 
@@ -50,14 +66,18 @@ for (const c of library.conflicts) console.log(`  conflict ${c.a} x ${c.b}: ${c.
 
 async function save() {
   await mkdir(path.dirname(outFile), { recursive: true });
-  await writeFile(outFile, JSON.stringify(recordings));
-  console.log(`Saved ${Object.keys(recordings).length} recordings. Credits this run: ${credits}`);
+  // A full run keeps only the responses it used, so stale recordings do not pile up.
+  const keep = mode === 'all' ? Object.fromEntries(Object.entries(recordings).filter(([h]) => touched.has(h))) : recordings;
+  await writeFile(outFile, JSON.stringify(keep));
+  console.log(`Saved ${Object.keys(keep).length} recordings. Credits this run: ${credits}`);
 }
 
 function printAsk(r) {
   console.log(`  masked: ${r.screen?.masked}`);
   console.log(`  used: ${(r.retrieval?.used || []).map((p) => p.id).join(', ')}`);
   for (const x of r.retrieval?.results || []) console.log(`    ${x.id.padEnd(18)} ${x.action.padEnd(6)} ${(x.reason || '').padEnd(15)} ${x.relevance_score.toFixed(3)} kw#${x.keywordRank ?? '-'}`);
+  if (r.baseline) console.log(`  UNCHECKED: ${r.baseline.answer}`);
+  for (const c of r.baselineVerify?.claims || []) console.log(`    u[${c.verdict}] ${c.claim}`);
   if (r.draft) console.log(`  draft: ${r.draft.answer}\n  key rule: ${r.draft.keyRule?.value}`);
   for (const c of r.verify?.claims || []) console.log(`    [${c.verdict}] ${c.claim}`);
   console.log(`  route: ${JSON.stringify(r.route)}`);
@@ -82,5 +102,5 @@ if (mode === 'ask') {
     for (const c of r.verify?.claims || []) console.log(`    [${c.verdict}] ${c.claim}`);
   }
 }
-await save();
+if (!replay) await save();
 void buildLibrary;

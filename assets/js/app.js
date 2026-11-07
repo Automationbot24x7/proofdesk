@@ -583,7 +583,7 @@ function claimNotes(verify, { removed = true } = {}) {
     if (c.verdict === 'contradicted') {
       notes.push(`<div class="note bad">${icon('x', 15)}<div><b>${removed ? 'Removed' : 'Contradicted'}:</b> “${esc(c.claim)}”${c.evidence?.quote ? `<br>The handbook says: <q>${esc(c.evidence.quote)}</q>` : ''}</div></div>`);
     } else if (c.verdict === 'not_stated') {
-      notes.push(`<div class="note warn">${icon('alert', 15)}<div><b>Not in the handbook:</b> “${esc(c.claim)}”${c.evidence?.quote ? `<br>Closest passage: <q>${esc(c.evidence.quote)}</q>` : ''}</div></div>`);
+      notes.push(`<div class="note warn">${icon('alert', 15)}<div><b>Not stated in the sources:</b> “${esc(c.claim)}”${c.evidence?.quote ? `<br>Closest passage: <q>${esc(c.evidence.quote)}</q>` : ''}</div></div>`);
     }
   }
   return notes.join('');
@@ -646,6 +646,18 @@ function proofdeskCard(r) {
   const srcHtml = sources.length ? `<div class="sources"><div class="section-title" style="display:flex;gap:8px;align-items:center">Passages ${endpointTag('rerank')}</div>${sources.map((x) => `
       <div class="src"><div class="nm"><button type="button" data-passage="${esc(x.id)}">${esc(x.passage?.title || x.id)}</button><span class="kw">keyword #${x.keywordRank ?? '–'}</span></div>
       <div class="right">${rerankChip(x)}${meter(x.relevance_score, x.action === 'use' ? 'ok' : 'neutral')}</div></div>`).join('')}</div>` : '';
+  const human = r.route?.key === 'people_team' || r.route?.key === 'it_desk';
+  if (human) {
+    const team = r.route.key === 'it_desk' ? 'IT Service Desk' : 'People Team';
+    const reasons = [];
+    if (withheld.length) reasons.push('the fix in the handbook includes a script that failed a safety inspection');
+    for (const c of r.route.concerns || []) reasons.push({ wellbeing_or_conduct: 'the message mentions wellbeing or conduct', dispute: 'it involves a dispute', exception_request: 'it asks for an exception', not_covered: 'the handbook does not cover it' }[c] || c.replace(/_/g, ' '));
+    const handoff = `<div class="handoff"><div class="k">What the employee sees</div>Your question has been passed to the ${team}${reasons.length ? `, because ${esc(reasons.join(', and '))}` : ''}. Someone will reply to you directly.</div>`;
+    return `<div class="card answer-card fade-in">${head}${routeBlock(r)}${handoff}
+      ${r.draft ? `<details class="held"><summary>${icon('chevron', 14)}Checked draft attached for the ${team}, not sent to the employee</summary>
+        <div class="answer-body">${answer}</div><div class="notes">${claimNotes(r.verify)}${extraNotes}</div>${keyRule}${facts}</details>` : `<div class="notes" style="padding-top:12px">${extraNotes}</div>`}
+      ${srcHtml}</div>`;
+  }
   return `<div class="card answer-card fade-in">${head}${routeBlock(r)}
     <div class="answer-body">${answer}</div>
     <div class="notes">${claimNotes(r.verify)}${extraNotes}</div>
@@ -677,6 +689,13 @@ function baselineDangers(b, r) {
   return out.join('');
 }
 
+function unsafeScriptNote(d) {
+  const block = d.codeBlocks[0];
+  const marks = (d.scriptCheck.evidence || []).filter((e) => Number.isInteger(e.docStart)).map((e) => ({ start: e.docStart - block.start, end: e.docEnd - block.start, cls: 'm-script-bad' }));
+  return `<div class="note bad" style="display:block">${icon('code', 15)} <b>It points the employee to this script.</b> Inspect classed it as ${esc(d.scriptCheck.category)} (${esc(d.scriptCheck.severity || 'flagged')}):
+    <pre class="script-pre">${renderMarked(block.code.trimEnd(), marks)}</pre></div>`;
+}
+
 function baselineCard(r) {
   const head = `<div class="card-head"><h3>${icon('alert', 16)}Unchecked desk</h3><span class="faint" style="font-size:12.5px">Same draft step, raw documents</span></div>`;
   const s = r.steps.baseline;
@@ -687,12 +706,25 @@ function baselineCard(r) {
   const bv = r.baselineVerify;
   const sum = bv ? verifySummary(bv) : null;
   const body = bv ? claimsHtml(bv, { strike: false, prefix: 'bl' }) : esc(b.answer);
-  const verdict = bv
-    ? `<div class="route"><span class="badge ${sum.contradicted ? 'bad' : (sum.notStated ? 'warn' : 'ok')}">${icon(sum.contradicted ? 'x' : (sum.notStated ? 'alert' : 'check'), 15)}${sum.contradicted ? `${plural(sum.contradicted, 'claim')} contradicted` : (sum.notStated ? `${plural(sum.notStated, 'claim')} not in the handbook` : 'Happens to be supported')}</span><span class="why">${endpointTag('grounding')} checked against the passages Proofdesk selected</span></div>`
+  const humanRoute = r.route?.key === 'people_team' || r.route?.key === 'it_desk';
+  let badge = '';
+  if (bv) {
+    if (sum.contradicted) badge = `<span class="badge bad">${icon('x', 15)}${plural(sum.contradicted, 'claim')} contradicted</span>`;
+    else if (sum.notStated) badge = `<span class="badge warn">${icon('alert', 15)}${plural(sum.notStated, 'claim')} not stated in the sources</span>`;
+    else if (humanRoute) badge = `<span class="badge warn">${icon('alert', 15)}Accurate, but sent automatically</span>`;
+    else badge = `<span class="badge ok">${icon('check', 15)}Supported this time</span>`;
+  } else if (r.route?.key === 'blocked') badge = `<span class="badge warn">${icon('alert', 15)}Answered a manipulative message</span>`;
+  const verdict = badge
+    ? `<div class="route">${badge}<span class="why">${bv ? `${endpointTag('grounding')} checked against the passages Proofdesk selected` : 'No screening step'}</span></div>`
     : (r.steps['baseline-verify']?.status === 'running' ? '<div class="route"><span class="spin"></span><span class="why">Checking this answer…</span></div>' : '');
+  const extra = [];
+  if (humanRoute) extra.push(`<div class="note warn">${icon('route', 15)}<div><b>No routing step.</b> The unchecked desk answers everything automatically; Proofdesk passed this one to a person.</div></div>`);
+  if (r.screen?.entities?.length) extra.push(`<div class="note warn">${icon('mask', 15)}<div><b>Logged unmasked.</b> The question was searched and stored with ${esc([...new Set(r.screen.entities.map((e) => e.type.replace(/_/g, ' ')))].join(' and '))} in plain text.</div></div>`);
+  const unsafe = (b.passages || []).map((p) => ({ p, d: state.library.docs.find((x) => x.id === p.docId) })).find(({ p, d }) => p.hasScript && d?.scriptCheck?.flagged);
+  if (unsafe) extra.push(unsafeScriptNote(unsafe.d));
   return `<div class="card answer-card baseline-card fade-in">${head}${verdict}
     <div class="answer-body">${body}</div>
-    <div class="notes">${bv ? claimNotes(bv, { removed: false }) : ''}</div>
+    <div class="notes">${bv ? claimNotes(bv, { removed: false }) : ''}${extra.join('')}</div>
     <div class="sources"><div class="section-title">What it read (top 3 keyword matches, unscreened)</div>${baselineDangers(b, r)}</div></div>`;
 }
 
