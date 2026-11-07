@@ -459,3 +459,82 @@ dialog.modal::backdrop { background: rgba(13, 21, 36, .4); }
 .held .keyrule { margin-left: 12px; margin-right: 12px; }
 .held + .sources { margin-top: 14px; }
 .script-pre { margin: 8px 0 0; padding: 10px 12px; background: #fff; border: 1px solid var(--bad-line); border-radius: 8px; font-family: var(--mono); font-size: 11.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+
+/* ---------- Review round 1 refinements ---------- */
+.view-bar { display: flex; align-items: center; gap: 12px; margin: -4px 0 16px; flex-wrap: wrap; }
+.view-bar h1 { font-size: 19px; font-weight: 680; letter-spacing: -0.02em; white-space: nowrap; }
+.view-bar p { flex: 1 1 420px; color: var(--text-2); font-size: 13.5px; line-height: 1.45; min-width: 0; }
+.view-bar .btn { margin-left: auto; }
+.cp-tag { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--accent); color: #fff; font-weight: 700; font-size: 12.5px; flex: none; }
+.page { padding-top: 20px; }
+
+.stat { padding: 12px 14px; display: flex; flex-direction: column; min-height: 104px; }
+.stat .num { font-size: 24px; }
+.stat .lbl { font-size: 12.5px; line-height: 1.35; }
+.stat .by { margin-top: auto; padding-top: 8px; }
+button.stat { text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .12s, box-shadow .12s; }
+button.stat:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+button.stat:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Extract annotations: light, so they do not compete with the primary button */
+.m-meta { background: #f1f3fe; box-shadow: inset 0 -1.5px 0 #b9c1f3; }
+.tagmark.meta { background: transparent; color: var(--accent-ink); border: 1px solid #c9cff5; font-size: 9.5px; line-height: 14px; padding: 0 4px; }
+.tagmark { font-size: 9.5px; line-height: 15px; }
+
+/* Ledger evidence inside the source viewer */
+.ev { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ev-quote { padding: 7px 10px; border-radius: 7px; background: var(--surface-2); font-size: 12.5px; color: var(--text); line-height: 1.45; }
+.ev-quote.bad { background: var(--bad-soft); color: #7d1d18; }
+.ev-quote.code { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap; word-break: break-word; }
+.ev-pair { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; font-size: 12.5px; }
+.ev-pair > div { padding: 7px 10px; line-height: 1.45; }
+.ev-pair > div + div { border-left: 1px solid var(--border); }
+.ev-pair .who { display: block; font-size: 10.5px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); margin-bottom: 2px; }
+.ev-pair .old { background: #fdfaf3; }
+.ev-pair .old q { text-decoration: line-through; text-decoration-color: rgba(154, 90, 5, .45); }
+.ev-pii { display: flex; flex-wrap: wrap; gap: 6px; }
+.ev-pii span { display: inline-flex; gap: 6px; align-items: center; padding: 3px 8px; border-radius: 6px; background: var(--violet-soft); color: var(--violet); font-size: 12px; }
+.ev-pii s { color: var(--text-2); }
+.ev-more { font-size: 12px; color: var(--text-3); }
+
+/* Pipeline steps coloured by what they did, not by "the call succeeded" */
+.stp.done .bar { background: var(--border-strong); }
+.stp.done .st.state-ok { background: var(--surface-2); color: var(--text-3); }
+.stp.tone-act { background: #f5f6fe; }
+.stp.tone-act .bar { background: var(--accent); }
+.stp.tone-act .st { background: var(--accent); color: #fff; }
+.stp.tone-act .sum { color: var(--accent-ink); font-weight: 550; }
+.stp.tone-warn { background: #fffaf0; }
+.stp.tone-warn .bar { background: #d18a16; }
+.stp.tone-warn .st { background: #d18a16; color: #fff; }
+.stp.tone-warn .sum { color: var(--warn); font-weight: 550; }
+.stp.tone-bad { background: #fff6f5; }
+.stp.tone-bad .bar, .stp.blocked .bar { background: var(--bad); }
+.stp.tone-bad .st { background: var(--bad); color: #fff; }
+.stp.tone-bad .sum { color: var(--bad); font-weight: 550; }
+.stp.pop { animation: pop .45s ease both; }
+@keyframes pop { 0% { box-shadow: inset 0 0 0 2px transparent; } 40% { box-shadow: inset 0 0 0 2px rgba(52, 70, 212, .35); } 100% { box-shadow: inset 0 0 0 2px transparent; } }
+
+/* Unchecked desk: never green, visibly the unsafe baseline */
+.baseline-card { background: #fffcfb; border-color: #f1d9d6; }
+.baseline-card .card-head h3 .ic { color: var(--bad); }
+.claim.neutral { background: none; }
+.cite.neutral { background: var(--surface-3); color: var(--text-2); }
+
+/* Passages list: the used ones first, the rest behind a toggle */
+.src-more { margin-top: 6px; }
+.src-more summary { cursor: pointer; font-size: 12.5px; color: var(--text-2); font-weight: 550; padding: 6px 0; list-style: none; }
+.src-more summary::-webkit-details-marker { display: none; }
+.lg details.rr summary { color: var(--text-2); }
+
+/* Mobile overflow guards */
+.answer-grid > *, .source-grid > *, .side, .side > *, .compare-grid > * { min-width: 0; }
+.scenario .n { flex-wrap: wrap; }
+@media (max-width: 920px) {
+  .view-bar .btn { margin-left: 0; }
+}
+.baseline-card .claim.contradicted, .check-card .claim.contradicted { text-decoration: underline wavy rgba(190, 45, 38, .55); text-underline-offset: 4px; color: var(--text); background: var(--bad-soft); }
+.stepper { grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); }
+@media (max-width: 920px) { .stepper { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mode-pill { display: none; } .topbar { padding: 10px 12px; } .top-right .btn { padding: 0 10px; } .brand { font-size: 15px; } }
+@media (max-width: 600px) { .btn .long { display: none; } }

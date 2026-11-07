@@ -31,13 +31,11 @@
   <main class="page">
     <!-- 1. Source check -->
     <section class="view" id="view-sources" role="tabpanel" aria-labelledby="tab-sources">
-      <div class="view-head">
-        <div>
-          <div class="eyebrow">Checkpoint 1 · before an assistant can read a document</div>
-          <h1>Source check</h1>
-          <p>Every document is read for its effective date, personal data, hidden instructions and unsafe scripts in one Clocked Pipeline call, then all documents are compared to find rules that disagree. Only documents that pass are searchable.</p>
-        </div>
-        <button class="btn" id="rescan-btn" type="button"></button>
+      <div class="view-bar">
+        <span class="cp-tag">1</span>
+        <h1>Source check</h1>
+        <p>Each document gets one Clocked Pipeline call (Extract, Protect, Guard, Inspect), then Compare finds rules that disagree. Only documents that pass can be searched.</p>
+        <button class="btn btn-sm" id="rescan-btn" type="button"></button>
       </div>
       <div class="stats" id="stats"></div>
       <div class="source-grid">
@@ -51,12 +49,10 @@
 
     <!-- 2. Answer check -->
     <section class="view" id="view-answers" role="tabpanel" aria-labelledby="tab-answers" hidden>
-      <div class="view-head">
-        <div>
-          <div class="eyebrow">Checkpoint 2 · before an employee sees an answer</div>
-          <h1>Answer check</h1>
-          <p>Ask as an employee. The question is screened, passages are reranked for this person, the drafted answer is checked claim by claim against them, and a routing decision says whether the desk answers or a person does.</p>
-        </div>
+      <div class="view-bar">
+        <span class="cp-tag">2</span>
+        <h1>Answer check</h1>
+        <p>The question is screened, passages are reranked for this employee, the draft is checked claim by claim, and Decide picks who answers.</p>
       </div>
       <div class="answer-grid">
         <aside class="side">

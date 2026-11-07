@@ -4,6 +4,8 @@ import { loadHandbook, screenLibrary, ask, checkAnswer, PROFILES, DEFAULT_PROFIL
 import { $, $$, esc, pct, plural, formatDate, endpointTag, renderMarked, structureMarks, meter, icon, jsonBlock } from './ui.js';
 
 const KEY_STORE = 'proofdesk.clockedKey';
+// Probabilities near 0 or 1 keep a decimal, so 0.9961 reads as 99.6% rather than a round 100%.
+const pp = (x) => { const v = (x || 0) * 100; return (v >= 99.5 || (v > 0 && v < 0.5) ? v.toFixed(1) : Math.round(v)) + '%'; };
 
 const state = {
   view: 'sources',
@@ -17,7 +19,7 @@ const state = {
   docStatus: {},
   libSteps: {},
   libError: null,
-  selectedDoc: 'travel-2025',
+  selectedDoc: 'benefits-faq',
   profile: { ...DEFAULT_PROFILE },
   scenario: null,
   result: null,
@@ -112,7 +114,7 @@ function renderMode() {
   $('#mode-text').innerHTML = state.key
     ? `<b>Live</b><span class="long"> · ${state.credits.toLocaleString()} credits used</span>`
     : `<b>Recorded</b><span class="long"> responses</span>`;
-  $('#key-btn').innerHTML = state.key ? 'Remove key' : `${icon('key')}Run live with your key`;
+  $('#key-btn').innerHTML = state.key ? 'Remove key' : `${icon('key')}Run live<span class="long"> with your key</span>`;
   $('#key-btn').className = state.key ? 'btn btn-sm btn-ghost' : 'btn btn-sm btn-primary';
   $('#rescan-btn').innerHTML = state.key ? `${icon('play')}Run source check live` : `${icon('play')}Replay source check`;
 }
@@ -216,24 +218,35 @@ function renderStats(docs) {
   const retired = done ? state.library.docs.filter((d) => d.flags.includes('superseded')).length : null;
   const searchable = done ? state.library.docs.filter((d) => d.searchable).length : null;
   const anyDone = screened.length > 0;
-  const tile = (num, lbl, tone, eps, pending) => `
-    <div class="stat ${pending ? 'pending' : 'tone-' + tone}">
+  const tile = (num, lbl, tone, eps, pending, jump = '', extra = '') => {
+    const tag = jump && !pending && num ? 'button' : 'div';
+    return `<${tag} class="stat ${pending ? 'pending' : 'tone-' + tone}"${tag === 'button' ? ` type="button" data-jump="${jump}" title="Show this document"` : ''}>
       <div class="num">${pending ? '–' : num}</div>
       <div class="lbl">${lbl}</div>
-      <div class="by ep-row">${eps.map((e) => endpointTag(e)).join('')}</div>
-    </div>`;
+      <div class="by ep-row">${eps.map((e) => endpointTag(e)).join('')}${extra}</div>
+    </${tag}>`;
+  };
   $('#stats').innerHTML = [
-    tile(state.handbook.docs.length, 'Documents imported', 'neutral', ['pipeline'], false),
-    tile(piiCount, 'Personal details masked', 'violet', ['pii'], !anyDone),
-    tile(quarantined, 'Quarantined for hidden instructions', 'bad', ['injection'], !anyDone),
-    tile(withheld, 'Unsafe script withheld', 'bad', ['script'], !anyDone),
-    tile(retired, 'Retired policy version', 'warn', ['compare', 'extract'], retired === null),
-    tile(searchable, 'Searchable by the assistant', 'ok', [], searchable === null),
+    tile(state.handbook.docs.length, 'Documents imported', 'neutral', ['pipeline']),
+    tile(piiCount, 'Personal details masked', 'violet', ['pii'], !anyDone, 'masked'),
+    tile(quarantined, 'Quarantined for hidden instructions', 'bad', ['injection'], !anyDone, 'quarantined'),
+    tile(withheld, 'Unsafe script withheld', 'bad', ['script'], !anyDone, 'script_withheld'),
+    tile(retired, 'Retired policy version', 'warn', ['compare', 'extract'], retired === null, 'superseded'),
+    tile(searchable, 'Searchable by the assistant', 'ok', [], searchable === null, '', '<span class="chip chip-ok">Indexed, masked copies</span>'),
   ].join('');
 }
 
+const SEVERITY = ['quarantined', 'script_withheld', 'superseded', 'failed', 'masked', 'conflict'];
+function severity(x) {
+  const flags = x.final ? x.doc.flags : provisionalFlags(x.doc);
+  const i = SEVERITY.findIndex((f) => flags.includes(f));
+  return i < 0 ? SEVERITY.length : i;
+}
+
 function renderDocList(docs) {
-  const rows = docs.map(({ doc, final, running }) => {
+  const order = state.handbook.docs.map((d) => d.id);
+  const sorted = [...docs].sort((a, b) => severity(a) - severity(b) || order.indexOf(a.doc.id) - order.indexOf(b.doc.id));
+  const rows = sorted.map(({ doc, final, running }) => {
     const flags = final ? doc.flags : provisionalFlags(doc);
     const excluded = final && !doc.searchable;
     let stateCls = 'state-pending', stateIc = icon('clock', 13);
@@ -349,31 +362,43 @@ function docLedger(doc, final) {
   }
   const md = doc.metadata;
   if (md) {
-    add('extract', `Read ${[md.version?.value, md.effectiveIso ? `effective ${formatDate(md.effectiveIso)}` : null, md.owner?.value].filter(Boolean).map(esc).join(' · ') || 'no metadata'}.`,
+    const got = [md.version ? `version ${esc(md.version.value)}` : 'no version', md.effectiveIso ? `effective ${esc(formatDate(md.effectiveIso))}` : 'no effective date', md.owner ? `owner ${esc(md.owner.value)}` : 'no owner'];
+    add('extract', `Read ${got.join(' · ')}.`,
       md.effectiveIso ? 'The effective date decides which version stays in force when documents conflict.' : '<b>No effective date</b>, so this document can never retire another one automatically.');
   }
   if (doc.pii) {
     const n = doc.pii.entities.length;
+    const ev = n ? `<div class="ev ev-pii">${doc.pii.entities.map((e) => `<span><s>${esc(e.value)}</s>${icon('arrow', 12)}&lt;${esc(e.type.toUpperCase())}&gt;</span>`).join('')}</div>` : '';
     add('pii', n ? `Found ${plural(n, 'personal detail')}: ${[...new Set(doc.pii.entities.map((e) => e.type.replace(/_/g, ' ')))].map(esc).join(', ')}.` : 'No personal data found.',
-      n ? '<b>Masked in the searchable copy.</b> The assistant only ever reads the masked text.' : 'Indexed as written. Company team mailboxes are allowed through.');
+      (n ? '<b>Masked in the searchable copy.</b> The assistant only ever reads the masked text.' : 'Indexed as written. Company team mailboxes are allowed through.') + ev);
   }
   if (doc.guard) {
-    add('injection', doc.guard.flagged ? `Hidden instructions: ${esc(doc.guard.category)} (${esc(doc.guard.severity || 'flagged')}, ${pct(doc.guard.injection)}).` : `No injection found (${pct(doc.guard.injection, 1)} risk).`,
-      doc.guard.flagged ? '<b>Quarantined.</b> Not searchable and not compared with other documents.' : 'Allowed into the index.');
+    const ev = doc.guard.flagged && doc.guard.evidence.length ? `<div class="ev">${doc.guard.evidence.map((e) => `<div class="ev-quote bad">“${esc(e.quote)}”</div>`).join('')}</div>` : '';
+    add('injection', doc.guard.flagged ? `Hidden instructions: ${esc(doc.guard.category)} (${esc(doc.guard.severity || 'flagged')}, ${pp(doc.guard.injection)}).` : `No injection found (${pp(doc.guard.injection)} risk).`,
+      (doc.guard.flagged ? '<b>Quarantined.</b> Not searchable and not compared with other documents.' : 'Allowed into the index.') + ev);
   }
   if (doc.scriptCheck) {
     const sc = doc.scriptCheck;
-    add('script', sc.failed ? 'The script could not be inspected.' : `Script classed as ${esc(sc.category)}${sc.severity ? ` (${esc(sc.severity)})` : ''}, ${pct(sc.malicious)} malicious.`,
-      sc.flagged ? '<b>Script removed</b> from the searchable copy. Questions about this fix are routed to the IT Service Desk.' : 'Kept, and shown to employees with an inspected label.');
+    const ev = sc.flagged && sc.evidence.length ? `<div class="ev">${sc.evidence.map((e) => `<div class="ev-quote bad code">${esc(e.line)}</div>`).join('')}</div>` : '';
+    add('script', sc.failed ? 'The script could not be inspected.' : `Script classed as ${esc(sc.category)}${sc.severity ? ` (${esc(sc.severity)})` : ''}, ${pp(sc.malicious)} malicious.`,
+      (sc.flagged ? '<b>Script removed</b> from the searchable copy. Questions about this fix are routed to the IT Service Desk.' : 'Kept, and shown to employees with an inspected label.') + ev);
   }
   if (final) {
     for (const c of state.library.conflicts.filter((x) => x.a === doc.id || x.b === doc.id)) {
       const other = c.a === doc.id ? c.b : c.a;
       const o = titleOf(other);
+      const retiredSide = c.resolution.kind === 'superseded' ? c.resolution.older : null;
+      const cell = (q) => (q ? `<div class="${retiredSide === q.document ? 'old' : ''}"><span class="who">${esc(titleOf(q.document).version || titleOf(q.document).title)}</span><q>${esc(q.quote)}</q></div>` : '<div class="faint">No passage</div>');
+      const pairs = c.findings.slice(0, 2).map((f) => {
+        const mine = f.a?.document === doc.id ? f.a : f.b;
+        const theirs = f.a?.document === doc.id ? f.b : f.a;
+        return `<div class="ev-pair">${cell(mine)}${cell(theirs)}</div>`;
+      }).join('');
+      const evc = `<div class="ev">${pairs}${c.findings.length > 2 ? `<div class="ev-more">${c.findings.length - 2} more conflicting statements in the Compare response</div>` : ''}</div>`;
       if (c.resolution.kind === 'superseded') {
         const retired = c.resolution.older === doc.id;
         add('compare', `${plural(c.findings.length, 'conflicting statement')} with ${esc(o.title)} ${esc(o.version)}.`,
-          retired ? '<b>Retired:</b> its effective date is older, so it is excluded from answers.' : '<b>Stays in force:</b> it is the newer version.');
+          (retired ? '<b>Retired:</b> its effective date is older, so it is excluded from answers.' : '<b>Stays in force:</b> it is the newer version.') + evc);
       } else {
         add('compare', `${plural(c.findings.length, 'conflicting statement')} with ${esc(o.title)}.`, 'Both stay searchable; flagged for review.');
       }
@@ -447,6 +472,7 @@ function markScenario(id) {
 }
 
 function runScenario(sample) {
+  if (window.innerWidth < 920) setTimeout(() => $('#result').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   state.profile = { ...sample.profile };
   syncPersona();
   $('#question').value = sample.question;
@@ -505,17 +531,30 @@ const ASK_STEPS = [
 ];
 const CHECK_STEPS = ASK_STEPS.filter((s) => ['screen', 'search', 'rerank', 'verify'].includes(s.key));
 
+// Which steps changed the outcome in this run: 'act' (stepped in), 'warn', 'bad' or plain pass-through.
+function stepTone(key, r) {
+  if (key === 'screen' && r.screen) return r.screen.guard.flagged ? 'bad' : (r.screen.entities.length ? 'act' : '');
+  if (key === 'rerank' && r.retrieval) return r.retrieval.results.some((x) => x.reason === 'different_case') ? 'act' : '';
+  if (key === 'verify' && r.verify) {
+    const s = verifySummary(r.verify);
+    return s.contradicted ? 'bad' : (s.notStated ? 'warn' : '');
+  }
+  if (key === 'route' && r.route) return ['people_team', 'it_desk'].includes(r.route.key) ? 'act' : (r.route.key === 'answer_with_conditions' ? 'warn' : '');
+  return '';
+}
+
 function stepper(r) {
   const defs = r.kind === 'check' ? CHECK_STEPS : ASK_STEPS;
   const blocked = r.screen?.guard?.flagged;
-  return `<div class="stepper" style="grid-template-columns:repeat(${defs.length},1fr)">${defs.map((d) => {
+  return `<div class="stepper" style="--n:${defs.length}">${defs.map((d) => {
     const s = r.steps[d.key];
     let cls = 'pending', st = `<span class="st state-pending">${icon('clock', 11)}</span>`;
     if (s?.status === 'running') { cls = 'running'; st = '<span class="spin"></span>'; }
     else if (s?.status === 'done') {
       const bad = d.key === 'screen' && blocked;
-      cls = bad ? 'blocked' : 'done';
-      st = bad ? `<span class="st state-bad">${icon('x', 11)}</span>` : `<span class="st state-ok">${icon('check', 11)}</span>`;
+      const tone = stepTone(d.key, r);
+      cls = bad ? 'blocked tone-bad' : `done${tone ? ` tone-${tone}` : ''}`;
+      st = bad ? `<span class="st state-bad">${icon('x', 11)}</span>` : `<span class="st state-ok">${icon(tone === 'bad' || tone === 'warn' ? 'alert' : 'check', 11)}</span>`;
     } else if (s?.status === 'error') { cls = 'error'; st = `<span class="st state-bad">${icon('alert', 11)}</span>`; }
     else if (s?.status === 'skipped' || (!s && !r.pending)) { cls = 'skipped'; st = `<span class="st state-pending">–</span>`; }
     const sum = s?.status === 'error' ? 'Failed' : (s?.summary || (s?.status === 'running' ? (s.detail || 'Working…') : (cls === 'skipped' ? 'Not needed' : '')));
@@ -557,17 +596,18 @@ function passageById(id) {
 }
 
 // Answer text with each claim marked by its Verify verdict and a citation to its evidence.
-function claimsHtml(verify, { strike = true, prefix = 'c' } = {}) {
+function claimsHtml(verify, { prefix = 'c', neutral = false } = {}) {
   const claims = verify?.claims || [];
   let n = 0;
   return claims.map((c, i) => {
     const counted = c.counted !== false && c.kind !== 'not_a_claim';
     if (!counted) return `<span>${esc(c.claim)}</span>`;
     const v = c.verdict || 'not_stated';
-    const cls = v === 'contradicted' && !strike ? 'claim contradicted-soft' : `claim ${v}`;
+    const look = neutral && v === 'supported' ? 'neutral' : v;
+    const cls = `claim ${look}`;
     const ev = c.evidence;
     n++;
-    const cite = `<button class="cite ${v}" type="button" data-claim="${prefix}:${i}" title="${esc(verdictLabel(v))}${ev?.quote ? ': ' + esc(ev.quote) : ''}">${v === 'supported' ? n : (v === 'contradicted' ? '✕' : '?')}</button>`;
+    const cite = `<button class="cite ${look}" type="button" data-claim="${prefix}:${i}" title="${esc(verdictLabel(v))}${ev?.quote ? ': ' + esc(ev.quote) : ''}">${v === 'supported' ? n : (v === 'contradicted' ? '✕' : '?')}</button>`;
     return `<span class="${cls}">${esc(c.claim)}</span>${cite}`;
   }).join(' ');
 }
@@ -598,7 +638,7 @@ function routeBlock(r) {
   if (key === 'blocked') why = esc(r.route.reason);
   else if (r.route.decided) {
     const p = r.route.probabilities?.[r.route.decided];
-    why = `${endpointTag('decide')} ${esc((ROUTE_LABELS[r.route.decided]?.short || r.route.decided))} at ${pct(p ?? r.route.confidence)}`;
+    why = `${endpointTag('decide')} ${esc((ROUTE_LABELS[r.route.decided]?.short || r.route.decided))} at ${pp(p ?? r.route.confidence)}`;
     if (r.route.concerns?.length) why += ` · ${r.route.concerns.map((c) => esc(c.replace(/_/g, ' '))).join(', ')}`;
     if (r.route.reason) why += `<br>${esc(r.route.reason)}`;
   } else if (r.route.reason) why = esc(r.route.reason);
@@ -642,10 +682,16 @@ function proofdeskCard(r) {
     ...withheld.map((p) => `<div class="note bad">${icon('code', 15)}<div><b>Script withheld.</b> ${esc(p.title)} contains a script that failed Inspect, so it is not shown.</div></div>`),
     ...scriptOk.map((p) => `<div class="note ok">${icon('shield', 15)}<div><b>Script inspected:</b> the fix in ${esc(p.title)} was classed as routine administration before it was indexed.</div></div>`),
   ].join('');
-  const sources = (r.retrieval?.results || []).filter((x) => x.action === 'use' || x.reason === 'different_case' || x.action === 'expand').slice(0, 7);
-  const srcHtml = sources.length ? `<div class="sources"><div class="section-title" style="display:flex;gap:8px;align-items:center">Passages ${endpointTag('rerank')}</div>${sources.map((x) => `
+  const all = r.retrieval?.results || [];
+  const srcRow = (x) => `
       <div class="src"><div class="nm"><button type="button" data-passage="${esc(x.id)}">${esc(x.passage?.title || x.id)}</button><span class="kw">keyword #${x.keywordRank ?? '–'}</span></div>
-      <div class="right">${rerankChip(x)}${meter(x.relevance_score, x.action === 'use' ? 'ok' : 'neutral')}</div></div>`).join('')}</div>` : '';
+      <div class="right">${rerankChip(x)}${meter(x.relevance_score, x.action === 'use' ? 'ok' : 'neutral')}</div></div>`;
+  const usedRows = all.filter((x) => x.action === 'use');
+  const setAside = all.filter((x) => x.action !== 'use')
+    .sort((a, b) => (b.reason === 'different_case') - (a.reason === 'different_case') || b.relevance_score - a.relevance_score);
+  const diffCase = setAside.filter((x) => x.reason === 'different_case').length;
+  const srcHtml = all.length ? `<div class="sources"><div class="section-title" style="display:flex;gap:8px;align-items:center">Passages used ${endpointTag('rerank')}</div>${usedRows.map(srcRow).join('') || '<div class="muted" style="font-size:13px">None applies to this employee.</div>'}
+      ${setAside.length ? `<details class="src-more"${usedRows.length ? '' : ' open'}><summary>${icon('chevron', 12)} ${plural(setAside.length, 'passage')} set aside${diffCase ? `, ${diffCase} written for a different case` : ''}</summary>${setAside.map(srcRow).join('')}</details>` : ''}</div>` : '';
   const human = r.route?.key === 'people_team' || r.route?.key === 'it_desk';
   if (human) {
     const team = r.route.key === 'it_desk' ? 'IT Service Desk' : 'People Team';
@@ -705,13 +751,14 @@ function baselineCard(r) {
   if (!b?.answer) return `<div class="card answer-card baseline-card">${head}<div class="answer-body muted">No keyword match, so no unchecked answer.</div></div>`;
   const bv = r.baselineVerify;
   const sum = bv ? verifySummary(bv) : null;
-  const body = bv ? claimsHtml(bv, { strike: false, prefix: 'bl' }) : esc(b.answer);
+  const body = bv ? claimsHtml(bv, { prefix: 'bl', neutral: true }) : esc(b.answer);
   const humanRoute = r.route?.key === 'people_team' || r.route?.key === 'it_desk';
   let badge = '';
   if (bv) {
     if (sum.contradicted) badge = `<span class="badge bad">${icon('x', 15)}${plural(sum.contradicted, 'claim')} contradicted</span>`;
     else if (sum.notStated) badge = `<span class="badge warn">${icon('alert', 15)}${plural(sum.notStated, 'claim')} not stated in the sources</span>`;
-    else if (humanRoute) badge = `<span class="badge warn">${icon('alert', 15)}Accurate, but sent automatically</span>`;
+    else if (humanRoute && (r.route.concerns || []).includes('wellbeing_or_conduct')) badge = `<span class="badge bad">${icon('alert', 15)}Auto-replied to a wellbeing concern</span>`;
+    else if (humanRoute) badge = `<span class="badge bad">${icon('alert', 15)}Sent automatically; needed a person</span>`;
     else badge = `<span class="badge ok">${icon('check', 15)}Supported this time</span>`;
   } else if (r.route?.key === 'blocked') badge = `<span class="badge warn">${icon('alert', 15)}Answered a manipulative message</span>`;
   const verdict = badge
@@ -738,13 +785,13 @@ function checkCard(r) {
   if (r.notCovered) return `<div class="card answer-card">${head}<div class="answer-body muted">The handbook has no passage that answers this question, so none of the answer can be confirmed.</div></div>`;
   if (!r.verify) return `<div class="card answer-card">${head}<div class="card-body">${errorBox(r.error || { message: 'Not checked.' })}</div></div>`;
   const s = verifySummary(r.verify);
-  return `<div class="card answer-card fade-in">${head}
+  return `<div class="card answer-card check-card fade-in">${head}
     <div class="route"><span class="badge ${s.contradicted ? 'bad' : (s.notStated ? 'warn' : 'ok')}">${s.supported} of ${s.total} claims supported</span><span class="why">${endpointTag('grounding')} ${pct(r.verify.grounded)} of the answer by length</span></div>
     <div class="answer-body">${claimsHtml(r.verify, { strike: false, prefix: 'ck' })}</div>
     <div class="notes">${claimNotes(r.verify, { removed: false })}</div></div>`;
 }
 
-const LEDGER_ORDER = ['screen', 'search', 'rerank', 'expand', 'draft', 'verify', 'route', 'baseline', 'baseline-verify'];
+const LEDGER_ORDER = ['screen', 'search', 'rerank', 'draft', 'verify', 'route', 'baseline', 'baseline-verify'];
 const LEDGER_NAMES = {
   screen: 'Screen the question', search: 'Keyword search', rerank: 'Rerank for this person', expand: 'Read around',
   draft: 'Draft the answer', verify: 'Check every claim', route: 'Decide who answers',
@@ -761,10 +808,15 @@ function ledgerCard(r) {
     if (s.status === 'skipped') impact = esc(s.summary || 'Skipped');
     else if (s.status === 'done') impact = esc(impact);
     let extra = '';
-    if (k === 'rerank' && s.results) extra = rerankTable(s.results);
+    if (k === 'rerank' && s.results) {
+      const ex = r.steps.expand;
+      if (ex?.status === 'done') extra += `<div class="sm">Read around: ${plural(ex.results?.length || 0, 'neighbouring section')} re-read in a second Rerank call, ${ex.results?.filter((x) => x.action === 'use').length || 0} more to use.</div>`;
+      extra += `<details class="rr"><summary>All ${s.results.length} rerank decisions</summary>${rerankTable(s.results)}</details>`;
+    }
     if (k === 'search' && s.hits) extra = `<div class="sm">Top matches: ${s.hits.slice(0, 4).map((h) => esc(h.passage.title)).join(' · ')}</div>`;
     const json = s.request || s.response ? `<details><summary>Request and response</summary>${s.request ? jsonBlock(s.request) : ''}${s.response ? jsonBlock(s.response) : ''}</details>` : '';
-    const meta = s.meta ? `<span>${s.meta.replay ? 'recorded' : `${s.meta.ms} ms`}</span><span>${s.meta.credits} credits</span>` : '';
+    const exMeta = k === 'rerank' && r.steps.expand?.meta ? r.steps.expand.meta.credits : 0;
+    const meta = s.meta ? `<span>${s.meta.replay ? 'recorded' : `${s.meta.ms} ms`}</span><span>${s.meta.credits + exMeta} credits</span>` : '';
     return `<div class="lg ${s.lane === 'baseline' ? 'lane-baseline' : ''}">
       <div class="l"><b>${esc(LEDGER_NAMES[k])}</b><span class="ep-row">${LEDGER_EPS[k].map((e) => endpointTag(e)).join('')}</span></div>
       <div class="r"><div class="imp">${impact}</div>${s.status === 'done' && s.impact && s.summary ? `<div class="sm">${esc(s.summary)}</div>` : ''}${extra}${json}</div>
@@ -837,9 +889,14 @@ function openPassage(id, quote = null, span = null) {
 }
 
 function onDelegatedClick(e) {
-  const t = e.target.closest('[data-doc],[data-scenario],[data-passage],[data-claim],[data-action],[data-open-doc]');
+  const t = e.target.closest('[data-doc],[data-jump],[data-scenario],[data-passage],[data-claim],[data-action],[data-open-doc]');
   if (!t) return;
   if (t.dataset.doc) { state.selectedDoc = t.dataset.doc; renderSources(); return; }
+  if (t.dataset.jump) {
+    const d = state.library?.docs.find((x) => x.flags.includes(t.dataset.jump));
+    if (d) { state.selectedDoc = d.id; renderSources(); $('#viewer').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    return;
+  }
   if (t.dataset.scenario) { const s = state.samples.ask.find((x) => x.id === t.dataset.scenario); if (s) runScenario(s); return; }
   if (t.dataset.passage) { openPassage(t.dataset.passage, t.dataset.quote || null); return; }
   if (t.dataset.action === 'key') { openKeyDialog(); return; }
