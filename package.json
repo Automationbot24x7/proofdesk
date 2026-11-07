@@ -1,0 +1,13 @@
+{
+  "name": "proofdesk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Policy answers your team can trust: every source screened, every answer checked. Built on the Clocked API.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "record": "node tools/record.mjs",
+    "serve": "node tools/serve.mjs"
+  },
+  "engines": { "node": ">=18" }
+}
