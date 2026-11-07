@@ -120,7 +120,7 @@ tools/serve.mjs          static server for local use
 - Kestrel Works and all documents, names, phone numbers and addresses are fictional and were written for this demo. The phone number, personal email and home address in the onboarding checklist are synthetic test data for Protect. The IP address in the unsafe script is from the documentation range 203.0.113.0/24.
 - Fonts: [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) via Google Fonts (SIL Open Font License).
 - Icons: [Lucide](https://lucide.dev) (ISC License), embedded in `assets/js/icons.js`.
-- Logo, landing artwork and video music were made for this project; the artwork and music were generated, then edited and composited by the author. No stock or third-party images are used.
+- The logo was drawn for this project. The landing artwork, video narration and music were generated for this project with AI tools. No stock or third-party images are used.
 - No third-party code is bundled. The Clocked API is a product of Rezolve.ai.
 - AI coding tools were used to help build this project, as the challenge rules allow.
 
